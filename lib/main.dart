@@ -81,8 +81,8 @@ Future<void> startService() async {
   audioHandler = await AudioService.init(
     builder: () => AudioPlayerHandlerImpl(),
     config: AudioServiceConfig(
-      androidNotificationChannelId: 'com.shadow.blackhole.channel.audio',
-      androidNotificationChannelName: 'BlackHole',
+      androidNotificationChannelId: 'com.igm.dsmusic.channel.audio',
+      androidNotificationChannelName: 'DSMusic',
       androidNotificationOngoing: true,
       androidNotificationIcon: 'drawable/ic_stat_music_note',
       androidShowNotificationBadge: true,
@@ -182,7 +182,7 @@ class _MyAppState extends State<MyApp> {
     ]);
 
     return MaterialApp(
-      title: 'BlackHole',
+      title: 'DSMusic',
       restorationScopeId: 'blackhole',
       debugShowCheckedModeBanner: false,
       themeMode: currentTheme.currentTheme(),
