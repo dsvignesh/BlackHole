@@ -92,6 +92,8 @@ class _YouTubeState extends State<YouTube>
         controller: _controller,
         automaticallyImplyBackButton: false,
         automaticallyImplyDrawerHamburger: false,
+        transitionDuration: const Duration(milliseconds: 250),
+        implicitDuration: const Duration(milliseconds: 250),
         elevation: 8.0,
         insets: EdgeInsets.zero,
         leadingActions: [
@@ -127,7 +129,6 @@ class _YouTubeState extends State<YouTube>
         // print(_query);
         // },
         onSubmitted: (_query) {
-          _controller.close();
           Navigator.push(
             context,
             PageRouteBuilder(
@@ -137,6 +138,7 @@ class _YouTubeState extends State<YouTube>
               ),
             ),
           );
+          _controller.close();
           setState(() {
             if (ytSearch.contains(_query)) ytSearch.remove(_query);
             ytSearch.insert(0, _query);
@@ -290,6 +292,7 @@ class _YouTubeState extends State<YouTube>
                 ),
               if (searchedList.isEmpty)
                 SizedBox(
+                  height: boxSize,
                   child: Center(
                     child: SizedBox(
                         height: boxSize / 7,

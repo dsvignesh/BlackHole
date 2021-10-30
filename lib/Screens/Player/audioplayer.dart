@@ -15,13 +15,15 @@ import 'package:blackhole/CustomWidgets/textinput_dialog.dart';
 import 'package:blackhole/Helpers/config.dart';
 import 'package:blackhole/Helpers/lyrics.dart';
 import 'package:blackhole/Helpers/mediaitem_converter.dart';
+import 'package:blackhole/Screens/Common/song_list.dart';
 import 'package:blackhole/main.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flip_card/flip_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, rootBundle;
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -339,6 +341,22 @@ class _PlayScreenState extends State<PlayScreen> {
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(15.0))),
                               onSelected: (int? value) {
+                                if (value == 5) {
+                                  Navigator.push(
+                                      context,
+                                      PageRouteBuilder(
+                                        opaque: false,
+                                        pageBuilder: (_, __, ___) =>
+                                            SongsListPage(
+                                          listItem: {
+                                            'type': 'album',
+                                            'id': mediaItem.extras?['album_id'],
+                                            'title': mediaItem.album,
+                                            'image': mediaItem.artUri,
+                                          },
+                                        ),
+                                      ));
+                                }
                                 if (value == 4) {
                                   showDialog(
                                       context: context,
@@ -407,6 +425,20 @@ class _PlayScreenState extends State<PlayScreen> {
                               },
                               itemBuilder: (context) => offline
                                   ? [
+                                      if (mediaItem.extras?['album_id'] != null)
+                                        PopupMenuItem(
+                                            value: 5,
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.music_note_rounded,
+                                                ),
+                                                const SizedBox(width: 10.0),
+                                                Text(AppLocalizations.of(
+                                                        context)!
+                                                    .viewAlbum),
+                                              ],
+                                            )),
                                       PopupMenuItem(
                                           value: 1,
                                           child: Row(
@@ -436,6 +468,20 @@ class _PlayScreenState extends State<PlayScreen> {
                                             )),
                                     ]
                                   : [
+                                      if (mediaItem.extras?['album_id'] != null)
+                                        PopupMenuItem(
+                                            value: 5,
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.music_note_rounded,
+                                                ),
+                                                const SizedBox(width: 10.0),
+                                                Text(AppLocalizations.of(
+                                                        context)!
+                                                    .viewAlbum),
+                                              ],
+                                            )),
                                       PopupMenuItem(
                                           value: 0,
                                           child: Row(
@@ -921,39 +967,47 @@ class NowPlayingStream extends StatelessWidget {
                                     LikeButton(
                                       mediaItem: queue[index],
                                     ),
-                                    DownloadButton(icon: 'download', data: {
-                                      'id': queue[index].id.toString(),
-                                      'artist': queue[index].artist.toString(),
-                                      'album': queue[index].album.toString(),
-                                      'image': queue[index].artUri.toString(),
-                                      'duration': queue[index]
-                                          .duration!
-                                          .inSeconds
-                                          .toString(),
-                                      'title': queue[index].title.toString(),
-                                      'url': queue[index]
-                                          .extras?['url']
-                                          .toString(),
-                                      'year': queue[index]
-                                          .extras?['year']
-                                          .toString(),
-                                      'language': queue[index]
-                                          .extras?['language']
-                                          .toString(),
-                                      'genre': queue[index].genre?.toString(),
-                                      '320kbps':
-                                          queue[index].extras?['320kbps'],
-                                      'has_lyrics':
-                                          queue[index].extras?['has_lyrics'],
-                                      'release_date':
-                                          queue[index].extras?['release_date'],
-                                      'album_id':
-                                          queue[index].extras?['album_id'],
-                                      'subtitle':
-                                          queue[index].extras?['subtitle'],
-                                      'perma_url':
-                                          queue[index].extras?['perma_url'],
-                                    })
+                                    DownloadButton(
+                                        icon: 'download',
+                                        size: 25.0,
+                                        data: {
+                                          'id': queue[index].id.toString(),
+                                          'artist':
+                                              queue[index].artist.toString(),
+                                          'album':
+                                              queue[index].album.toString(),
+                                          'image':
+                                              queue[index].artUri.toString(),
+                                          'duration': queue[index]
+                                              .duration!
+                                              .inSeconds
+                                              .toString(),
+                                          'title':
+                                              queue[index].title.toString(),
+                                          'url': queue[index]
+                                              .extras?['url']
+                                              .toString(),
+                                          'year': queue[index]
+                                              .extras?['year']
+                                              .toString(),
+                                          'language': queue[index]
+                                              .extras?['language']
+                                              .toString(),
+                                          'genre':
+                                              queue[index].genre?.toString(),
+                                          '320kbps':
+                                              queue[index].extras?['320kbps'],
+                                          'has_lyrics': queue[index]
+                                              .extras?['has_lyrics'],
+                                          'release_date': queue[index]
+                                              .extras?['release_date'],
+                                          'album_id':
+                                              queue[index].extras?['album_id'],
+                                          'subtitle':
+                                              queue[index].extras?['subtitle'],
+                                          'perma_url':
+                                              queue[index].extras?['perma_url'],
+                                        })
                                   ],
                                 )
                               : const SizedBox(),
@@ -1089,11 +1143,6 @@ class _ArtWorkWidgetState extends State<ArtWorkWidget> {
   final ValueNotifier<bool> done = ValueNotifier<bool>(false);
   Map lyrics = {'id': '', 'lyrics': ''};
 
-  Future<String> fetchLyrics() async {
-    return Lyrics().getLyrics(
-        widget.mediaItem.title.toString(), widget.mediaItem.artist.toString());
-  }
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -1112,164 +1161,186 @@ class _ArtWorkWidgetState extends State<ArtWorkWidget> {
                 if (lyrics['id'] != widget.mediaItem.id ||
                     (!value && lyrics['lyrics'] == '' && !done.value)) {
                   done.value = false;
-                  fetchLyrics().then((value) {
-                    lyrics['lyrics'] = value;
-                    lyrics['id'] = widget.mediaItem.id;
-                    done.value = true;
-                  });
+                  if (widget.offline) {
+                    Lyrics()
+                        .getOffLyrics(
+                            widget.mediaItem.extras!['url'].toString())
+                        .then((value) {
+                      lyrics['lyrics'] = value;
+                      lyrics['id'] = widget.mediaItem.id;
+                      done.value = true;
+                    });
+                  } else {
+                    if (widget.mediaItem.extras?['has_lyrics'] == 'true') {
+                      Lyrics()
+                          .getSaavnLyrics(widget.mediaItem.id.toString())
+                          .then((value) {
+                        lyrics['lyrics'] = value;
+                        lyrics['id'] = widget.mediaItem.id;
+                        done.value = true;
+                      });
+                    } else {
+                      Lyrics()
+                          .getLyrics(widget.mediaItem.title.toString(),
+                              widget.mediaItem.artist.toString())
+                          .then((value) {
+                        lyrics['lyrics'] = value;
+                        lyrics['id'] = widget.mediaItem.id;
+                        done.value = true;
+                      });
+                    }
+                  }
                 }
               },
               back: GestureDetector(
                 onTap: () => widget.cardKey.currentState!.toggleCard(),
                 onDoubleTap: () => widget.cardKey.currentState!.toggleCard(),
-                child: ShaderMask(
-                  shaderCallback: (rect) {
-                    return const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black,
-                        Colors.black,
-                        Colors.black,
-                        Colors.transparent
-                      ],
-                    ).createShader(
-                        Rect.fromLTRB(0, 0, rect.width, rect.height));
-                  },
-                  blendMode: BlendMode.dstIn,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 55, horizontal: 10),
-                      child: widget.offline
-                          ? FutureBuilder(
-                              future: Lyrics().getOffLyrics(
-                                widget.mediaItem.extras!['url'].toString(),
-                              ),
-                              builder: (BuildContext context,
-                                  AsyncSnapshot<String> snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.done) {
-                                  final String lyrics = snapshot.data ?? '';
-                                  if (lyrics == '') {
-                                    return EmptyScreen().emptyScreen(
-                                      context,
-                                      0,
-                                      ':( ',
-                                      100.0,
-                                      AppLocalizations.of(context)!.lyrics,
-                                      60.0,
-                                      AppLocalizations.of(context)!
-                                          .notAvailable,
-                                      20.0,
-                                      useWhite: true,
-                                    );
-                                  }
-                                  return SelectableText(
-                                    lyrics,
-                                    textAlign: TextAlign.center,
-                                  );
-                                }
-                                return const CircularProgressIndicator();
-                              })
-                          : widget.mediaItem.extras?['has_lyrics'] == 'true'
-                              ? FutureBuilder(
-                                  future: Lyrics().getSaavnLyrics(
-                                      widget.mediaItem.id.toString()),
-                                  builder: (BuildContext context,
-                                      AsyncSnapshot<String> snapshot) {
-                                    String? lyrics;
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.done) {
-                                      lyrics = snapshot.data;
-                                      return Text(
-                                        lyrics!,
-                                        textAlign: TextAlign.center,
-                                      );
-                                    }
-                                    return const CircularProgressIndicator();
-                                  })
-                              : ValueListenableBuilder(
-                                  valueListenable: done,
-                                  builder: (BuildContext context, bool value,
-                                      Widget? child) {
-                                    return value
-                                        ? lyrics['lyrics'] == ''
-                                            ? EmptyScreen().emptyScreen(
-                                                context,
-                                                0,
-                                                ':( ',
-                                                100.0,
-                                                AppLocalizations.of(context)!
-                                                    .lyrics,
-                                                60.0,
-                                                AppLocalizations.of(context)!
-                                                    .notAvailable,
-                                                20.0,
-                                                useWhite: true,
-                                              )
-                                            : Text(
-                                                lyrics['lyrics'].toString(),
-                                                textAlign: TextAlign.center,
-                                              )
-                                        : const CircularProgressIndicator();
-                                  }),
+                child: Stack(
+                  children: [
+                    ShaderMask(
+                      shaderCallback: (rect) {
+                        return const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black,
+                            Colors.black,
+                            Colors.black,
+                            Colors.transparent
+                          ],
+                        ).createShader(
+                            Rect.fromLTRB(0, 0, rect.width, rect.height));
+                      },
+                      blendMode: BlendMode.dstIn,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 55, horizontal: 10),
+                          child: ValueListenableBuilder(
+                              valueListenable: done,
+                              builder: (BuildContext context, bool value,
+                                  Widget? child) {
+                                return value
+                                    ? lyrics['lyrics'] == ''
+                                        ? EmptyScreen().emptyScreen(
+                                            context,
+                                            0,
+                                            ':( ',
+                                            100.0,
+                                            AppLocalizations.of(context)!
+                                                .lyrics,
+                                            60.0,
+                                            AppLocalizations.of(context)!
+                                                .notAvailable,
+                                            20.0,
+                                            useWhite: true,
+                                          )
+                                        : SelectableText(
+                                            lyrics['lyrics'].toString(),
+                                            textAlign: TextAlign.center,
+                                          )
+                                    : const CircularProgressIndicator();
+                              }),
+                        ),
+                      ),
                     ),
-                  ),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Card(
+                        elevation: 10.0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0)),
+                        color: Theme.of(context).cardColor.withOpacity(0.6),
+                        clipBehavior: Clip.antiAlias,
+                        child: IconButton(
+                          tooltip: AppLocalizations.of(context)!.copy,
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(
+                                text: lyrics['lyrics'].toString()));
+                            ShowSnackBar().showSnackBar(
+                              context,
+                              AppLocalizations.of(context)!.copied,
+                            );
+                          },
+                          icon: const Icon(Icons.copy_rounded),
+                          color: Theme.of(context)
+                              .iconTheme
+                              .color!
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               front: StreamBuilder<QueueState>(
                   stream: audioHandler.queueState,
                   builder: (context, snapshot) {
                     final queueState = snapshot.data ?? QueueState.empty;
-                    return GestureDetector(
-                      onTap: () {
-                        audioHandler.playbackState.value.playing
-                            ? audioHandler.pause()
-                            : audioHandler.play();
-                      },
-                      onDoubleTap: () =>
-                          widget.cardKey.currentState!.toggleCard(),
-                      onHorizontalDragEnd: (DragEndDetails details) {
-                        if ((details.primaryVelocity ?? 0) > 100) {
-                          if (queueState.hasPrevious) {
-                            audioHandler.skipToPrevious();
-                          }
-                        }
 
-                        if ((details.primaryVelocity ?? 0) < -100) {
-                          if (queueState.hasNext) {
-                            audioHandler.skipToNext();
-                          }
-                        }
-                      },
-                      onLongPress: () {
-                        if (!widget.offline) {
-                          AddToPlaylist()
-                              .addToPlaylist(context, widget.mediaItem);
-                        }
-                      },
-                      onVerticalDragStart: (_) {
-                        dragging.value = true;
-                      },
-                      onVerticalDragEnd: (_) {
-                        dragging.value = false;
-                      },
-                      onVerticalDragUpdate: (DragUpdateDetails details) {
-                        if (details.delta.dy != 0.0) {
-                          double volume = audioHandler.volume.value;
-                          volume -= details.delta.dy / 150;
-                          if (volume < 0) {
-                            volume = 0;
-                          }
-                          if (volume > 1.0) {
-                            volume = 1.0;
-                          }
-                          audioHandler.setVolume(volume);
-                        }
-                      },
+                    final bool enabled = Hive.box('settings')
+                        .get('enableGesture', defaultValue: true) as bool;
+                    return GestureDetector(
+                      onTap: !enabled
+                          ? null
+                          : () {
+                              audioHandler.playbackState.value.playing
+                                  ? audioHandler.pause()
+                                  : audioHandler.play();
+                            },
+                      onDoubleTap: !enabled
+                          ? null
+                          : () => widget.cardKey.currentState!.toggleCard(),
+                      onHorizontalDragEnd: !enabled
+                          ? null
+                          : (DragEndDetails details) {
+                              if ((details.primaryVelocity ?? 0) > 100) {
+                                if (queueState.hasPrevious) {
+                                  audioHandler.skipToPrevious();
+                                }
+                              }
+
+                              if ((details.primaryVelocity ?? 0) < -100) {
+                                if (queueState.hasNext) {
+                                  audioHandler.skipToNext();
+                                }
+                              }
+                            },
+                      onLongPress: !enabled
+                          ? null
+                          : () {
+                              if (!widget.offline) {
+                                AddToPlaylist()
+                                    .addToPlaylist(context, widget.mediaItem);
+                              }
+                            },
+                      onVerticalDragStart: !enabled
+                          ? null
+                          : (_) {
+                              dragging.value = true;
+                            },
+                      onVerticalDragEnd: !enabled
+                          ? null
+                          : (_) {
+                              dragging.value = false;
+                            },
+                      onVerticalDragUpdate: !enabled
+                          ? null
+                          : (DragUpdateDetails details) {
+                              if (details.delta.dy != 0.0) {
+                                double volume = audioHandler.volume.value;
+                                volume -= details.delta.dy / 150;
+                                if (volume < 0) {
+                                  volume = 0;
+                                }
+                                if (volume > 1.0) {
+                                  volume = 1.0;
+                                }
+                                audioHandler.setVolume(volume);
+                              }
+                            },
                       child: Stack(
                         children: [
                           Card(
@@ -1431,40 +1502,70 @@ class NameNControls extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         /// Title and subtitle
-        Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(35, 5, 35, 0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  /// Title container
-                  Text(
-                    mediaItem.title.split(' (')[0].split('|')[0].trim(),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      // color: Theme.of(context).accentColor,
+        PopupMenuButton<int>(
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(15.0))),
+          offset: const Offset(1.0, 0.0),
+          onSelected: (int value) {
+            if (value == 0) {
+              Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    opaque: false,
+                    pageBuilder: (_, __, ___) => SongsListPage(
+                      listItem: {
+                        'type': 'album',
+                        'id': mediaItem.extras?['album_id'],
+                        'title': mediaItem.album,
+                        'image': mediaItem.artUri,
+                      },
                     ),
-                  ),
-
-                  const SizedBox(height: 3.0),
-
-                  /// Subtitle container
-                  Text(
-                    mediaItem.artist ?? 'Unknown',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w400),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ));
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
+            if (mediaItem.extras?['album_id'] != null)
+              PopupMenuItem<int>(
+                value: 0,
+                child: Center(
+                    child: Text(AppLocalizations.of(context)!.viewAlbum)),
               ),
-            ),
           ],
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(35, 5, 35, 0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    /// Title container
+                    Text(
+                      mediaItem.title.split(' (')[0].split('|')[0].trim(),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        // color: Theme.of(context).accentColor,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3.0),
+
+                    /// Subtitle container
+                    Text(
+                      '${mediaItem.artist ?? "Unknown"} • ${mediaItem.album ?? "Unknown"}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w400),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
 
         /// Seekbar starts from here
@@ -1565,7 +1666,7 @@ class NameNControls extends StatelessWidget {
                     },
                   ),
                   if (!offline)
-                    DownloadButton(data: {
+                    DownloadButton(size: 25.0, data: {
                       'id': mediaItem.id.toString(),
                       'artist': mediaItem.artist.toString(),
                       'album': mediaItem.album.toString(),

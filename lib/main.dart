@@ -52,6 +52,7 @@ Future<void> main() async {
   await Hive.initFlutter();
   await openHiveBox('settings');
   await openHiveBox('downloads');
+  await openHiveBox('Favorite Songs');
   await openHiveBox('cache', limit: true);
   if (Platform.isAndroid) {
     setOptimalDisplayMode();
@@ -143,7 +144,8 @@ class _MyAppState extends State<MyApp> {
     final Map<String, String> codes = {
       'English': 'en',
       'Russian': 'ru',
-      'Portuguese': 'pt'
+      'Portuguese': 'pt',
+      'Indonesia': 'id',
     };
     _locale = Locale(codes[lang]!);
     currentTheme.addListener(() {
@@ -268,6 +270,7 @@ class _MyAppState extends State<MyApp> {
         Locale('en', ''), // English, no country code
         Locale('ru', ''), // Russian
         Locale('pt', ''), // Portuguese, no country code
+        Locale('id', ''), // Indonesia, no country code
       ],
       routes: {
         '/': (context) => initialFuntion(),

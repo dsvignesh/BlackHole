@@ -22,7 +22,7 @@ class YouTubeSearchPage extends StatefulWidget {
 }
 
 class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
-  String? query;
+  String query = '';
   bool status = false;
   List<Video> searchedList = [];
   bool fetched = false;
@@ -35,7 +35,7 @@ class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
 
   @override
   void initState() {
-    _controller.query = query ?? widget.query;
+    _controller.query = widget.query;
     super.initState();
   }
 
@@ -49,7 +49,9 @@ class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
   Widget build(BuildContext context) {
     if (!status) {
       status = true;
-      YouTubeServices().fetchSearchResults(query ?? widget.query).then((value) {
+      YouTubeServices()
+          .fetchSearchResults(query == '' ? widget.query : query)
+          .then((value) {
         setState(() {
           searchedList = value;
           fetched = true;
@@ -69,17 +71,16 @@ class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
                   controller: _controller,
                   automaticallyImplyBackButton: false,
                   automaticallyImplyDrawerHamburger: false,
+                  transitionDuration: const Duration(milliseconds: 250),
+                  implicitDuration: const Duration(milliseconds: 250),
                   elevation: 8.0,
                   insets: EdgeInsets.zero,
                   leadingActions: [
                     FloatingSearchBarAction.icon(
                       showIfOpened: true,
                       size: 20.0,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.arrow_back_rounded,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? null
-                            : Colors.grey[700],
                       ),
                       onTap: () {
                         _controller.isOpen
@@ -92,11 +93,12 @@ class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
                   height: 52.0,
                   margins: const EdgeInsets.fromLTRB(18.0, 8.0, 18.0, 15.0),
                   scrollPadding: const EdgeInsets.only(bottom: 50),
-                  backdropColor: Colors.black12,
+                  backdropColor: Colors.black45,
                   transitionCurve: Curves.easeInOut,
                   physics: const BouncingScrollPhysics(),
                   openAxisAlignment: 0.0,
                   debounceDelay: const Duration(milliseconds: 500),
+                  clearQueryOnClose: false,
                   // onQueryChanged: (_query) {
                   // print(_query);
                   // },
@@ -232,7 +234,17 @@ class _YouTubeSearchPageState extends State<YouTubeSearchPage> {
                                               final Map? response =
                                                   await YouTubeServices()
                                                       .formatVideo(
-                                                          searchedList[index]);
+                                                video: searchedList[index],
+                                                quality: Hive.box('settings')
+                                                    .get('ytQuality',
+                                                        defaultValue: 'High')
+                                                    .toString(),
+                                                // preferM4a: Hive.box(
+                                                //         'settings')
+                                                //     .get('preferM4a',
+                                                //         defaultValue:
+                                                //             true) as bool
+                                              );
                                               setState(() {
                                                 done = true;
                                               });

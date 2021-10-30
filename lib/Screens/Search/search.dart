@@ -5,6 +5,7 @@ import 'package:blackhole/CustomWidgets/add_queue.dart';
 import 'package:blackhole/CustomWidgets/download_button.dart';
 import 'package:blackhole/CustomWidgets/empty_screen.dart';
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
+import 'package:blackhole/CustomWidgets/like_button.dart';
 import 'package:blackhole/CustomWidgets/miniplayer.dart';
 import 'package:blackhole/Screens/Common/song_list.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
@@ -94,6 +95,8 @@ class _SearchPageState extends State<SearchPage> {
                   controller: _controller,
                   automaticallyImplyBackButton: false,
                   automaticallyImplyDrawerHamburger: false,
+                  transitionDuration: const Duration(milliseconds: 250),
+                  implicitDuration: const Duration(milliseconds: 250),
                   elevation: 8.0,
                   insets: EdgeInsets.zero,
                   leadingActions: [
@@ -118,11 +121,21 @@ class _SearchPageState extends State<SearchPage> {
                   transitionCurve: Curves.easeInOut,
                   physics: const BouncingScrollPhysics(),
                   openAxisAlignment: 0.0,
-                  clearQueryOnClose: false,
                   debounceDelay: const Duration(milliseconds: 500),
-                  // onQueryChanged: (_query) {
-                  // print(_query);
-                  // },
+                  clearQueryOnClose: false,
+                  onQueryChanged: (_query) {
+                    if (Hive.box('settings')
+                            .get('liveSearch', defaultValue: false) as bool &&
+                        _query.trim() != '') {
+                      setState(() {
+                        fetched = false;
+                        query = _query;
+                        status = false;
+                        fromHome = false;
+                        searchedData = {};
+                      });
+                    }
+                  },
                   onSubmitted: (_query) {
                     _controller.close();
 
@@ -458,6 +471,12 @@ class _SearchPageState extends State<SearchPage> {
                                                                   icon:
                                                                       'download',
                                                                 ),
+                                                                LikeButton(
+                                                                    mediaItem:
+                                                                        null,
+                                                                    data: value[
+                                                                            index]
+                                                                        as Map),
                                                                 AddToQueueButton(
                                                                     data: value[
                                                                             index]
