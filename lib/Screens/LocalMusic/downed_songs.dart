@@ -24,23 +24,28 @@ import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DownloadedSongs extends StatefulWidget {
   final List<SongModel>? cachedSongs;
   final String? title;
   final int? playlistId;
-  const DownloadedSongs(
-      {Key? key, this.cachedSongs, this.title, this.playlistId})
-      : super(key: key);
+  const DownloadedSongs({
+    Key? key,
+    this.cachedSongs,
+    this.title,
+    this.playlistId,
+  }) : super(key: key);
   @override
   _DownloadedSongsState createState() => _DownloadedSongsState();
 }
 
 class _DownloadedSongsState extends State<DownloadedSongs>
     with AutomaticKeepAliveClientMixin {
-  List<SongModel> _cachedSongs = [];
-  List _cachedSongsMap =
-      Hive.box('cache').get('offlineSongsData', defaultValue: []) as List;
+  List<SongModel> _songs = [];
+  String tempPath = '';
+  // List _cachedSongsMap =
+  // Hive.box('cache').get('offlineSongsData', defaultValue: []) as List;
   // List<AlbumModel> _cachedAlbums = [];
   // List<ArtistModel> _cachedArtists = [];
   // List<GenreModel> _cachedGenres = [];
@@ -106,65 +111,69 @@ class _DownloadedSongsState extends State<DownloadedSongs>
 
   Future<void> getCached() async {
     await offlineAudioQuery.requestPermission();
+    tempPath = (await getTemporaryDirectory()).path;
     if (widget.cachedSongs == null) {
-      final List<SongModel> temp = await offlineAudioQuery.getSongs(
-          sortType: songSortTypes[sortValue],
-          orderType: songOrderTypes[orderValue]);
-      _cachedSongs = temp
-          .where((i) => (i.duration ?? 60000) > 1000 * minDuration)
+      _songs = (await offlineAudioQuery.getSongs(
+        sortType: songSortTypes[sortValue],
+        orderType: songOrderTypes[orderValue],
+      ))
+          .where(
+            (i) =>
+                (i.duration ?? 60000) > 1000 * minDuration &&
+                (i.isMusic! || i.isPodcast! || i.isAudioBook!),
+          )
           .toList();
     } else {
-      _cachedSongs = widget.cachedSongs!;
+      _songs = widget.cachedSongs!;
     }
     // _cachedAlbums = await getAlbums();
     // _cachedArtists = await getArtists();
     // _cachedGenres = await getGenres();
     added = true;
     setState(() {});
-    if (widget.cachedSongs == null) {
-      _cachedSongsMap = await offlineAudioQuery.getArtwork(_cachedSongs,
-          songsMap: _cachedSongsMap);
-      Hive.box('cache').put('offlineSongsData', _cachedSongsMap);
-    } else {
-      _cachedSongsMap = await offlineAudioQuery.getArtwork(_cachedSongs,
-          songsMap: _cachedSongsMap, artworkType: ArtworkType.PLAYLIST);
-    }
   }
 
   Future<void> sortSongs(int sortVal, int order) async {
     switch (sortVal) {
       case 0:
-        _cachedSongs.sort((a, b) =>
-            a.displayName.toString().compareTo(b.displayName.toString()));
+        _songs.sort(
+          (a, b) => a.displayName.compareTo(b.displayName),
+        );
         break;
       case 1:
-        _cachedSongs.sort(
-            (a, b) => a.dateAdded.toString().compareTo(b.dateAdded.toString()));
+        _songs.sort(
+          (a, b) => a.dateAdded.toString().compareTo(b.dateAdded.toString()),
+        );
         break;
       case 2:
-        _cachedSongs
-            .sort((a, b) => a.album.toString().compareTo(b.album.toString()));
+        _songs.sort(
+          (a, b) => a.album.toString().compareTo(b.album.toString()),
+        );
         break;
       case 3:
-        _cachedSongs
-            .sort((a, b) => a.artist.toString().compareTo(b.artist.toString()));
+        _songs.sort(
+          (a, b) => a.artist.toString().compareTo(b.artist.toString()),
+        );
         break;
       case 4:
-        _cachedSongs.sort(
-            (a, b) => a.duration.toString().compareTo(b.duration.toString()));
+        _songs.sort(
+          (a, b) => a.duration.toString().compareTo(b.duration.toString()),
+        );
         break;
       case 5:
-        _cachedSongs
-            .sort((a, b) => a.size.toString().compareTo(b.size.toString()));
+        _songs.sort(
+          (a, b) => a.size.toString().compareTo(b.size.toString()),
+        );
         break;
       default:
-        _cachedSongs.sort(
-            (a, b) => a.dateAdded.toString().compareTo(b.dateAdded.toString()));
+        _songs.sort(
+          (a, b) => a.dateAdded.toString().compareTo(b.dateAdded.toString()),
+        );
         break;
     }
 
     if (order == 1) {
-      _cachedSongs = _cachedSongs.reversed.toList();
+      _songs = _songs.reversed.toList();
     }
   }
 
@@ -404,13 +413,19 @@ class _DownloadedSongsState extends State<DownloadedSongs>
                     tooltip: AppLocalizations.of(context)!.search,
                     onPressed: () {
                       showSearch(
-                          context: context, delegate: DataSearch(_cachedSongs));
+                        context: context,
+                        delegate: DataSearch(
+                          data: _songs,
+                          tempPath: tempPath,
+                        ),
+                      );
                     },
                   ),
                   PopupMenuButton(
                     icon: const Icon(Icons.sort_rounded),
                     shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(15.0))),
+                      borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                    ),
                     onSelected: (int value) async {
                       if (value < 6) {
                         sortValue = value;
@@ -509,9 +524,10 @@ class _DownloadedSongsState extends State<DownloadedSongs>
                   ? SizedBox(
                       child: Center(
                         child: SizedBox(
-                            height: MediaQuery.of(context).size.width / 7,
-                            width: MediaQuery.of(context).size.width / 7,
-                            child: const CircularProgressIndicator()),
+                          height: MediaQuery.of(context).size.width / 7,
+                          width: MediaQuery.of(context).size.width / 7,
+                          child: const CircularProgressIndicator(),
+                        ),
                       ),
                     )
                   :
@@ -523,10 +539,10 @@ class _DownloadedSongsState extends State<DownloadedSongs>
                   //         //     ?
                   //         [
                   SongsTab(
-                      cachedSongs: _cachedSongs,
-                      cachedSongsMap: _cachedSongsMap,
+                      songs: _songs,
                       playlistId: widget.playlistId,
                       playlistName: widget.title,
+                      tempPath: tempPath,
                     ),
               // if (_cachedAlbums.isEmpty)
               //   EmptyScreen().emptyScreen(
@@ -827,22 +843,22 @@ class _DownloadedSongsState extends State<DownloadedSongs>
 }
 
 class SongsTab extends StatelessWidget {
-  final List<SongModel> cachedSongs;
-  final List cachedSongsMap;
+  final List<SongModel> songs;
   final int? playlistId;
   final String? playlistName;
-  const SongsTab(
-      {Key? key,
-      required this.cachedSongs,
-      required this.cachedSongsMap,
-      this.playlistId,
-      this.playlistName})
-      : super(key: key);
+  final String tempPath;
+  const SongsTab({
+    Key? key,
+    required this.songs,
+    required this.tempPath,
+    this.playlistId,
+    this.playlistName,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return cachedSongs.isEmpty
-        ? EmptyScreen().emptyScreen(
+    return songs.isEmpty
+        ? emptyScreen(
             context,
             3,
             AppLocalizations.of(context)!.nothingTo,
@@ -850,36 +866,21 @@ class SongsTab extends StatelessWidget {
             AppLocalizations.of(context)!.showHere,
             45,
             AppLocalizations.of(context)!.downloadSomething,
-            23.0)
+            23.0,
+          )
         : ListView.builder(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.only(top: 20, bottom: 10),
             shrinkWrap: true,
             itemExtent: 70.0,
-            itemCount: cachedSongs.length,
+            itemCount: songs.length,
             itemBuilder: (context, index) {
               return ListTile(
-                leading: Card(
-                  elevation: 5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(7.0),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: QueryArtworkWidget(
-                    id: cachedSongs[index].id,
-                    type: ArtworkType.AUDIO,
-                    keepOldArtwork: true,
-                    artworkBorder: BorderRadius.circular(7.0),
-                    nullArtworkWidget: ClipRRect(
-                      borderRadius: BorderRadius.circular(7.0),
-                      child: const Image(
-                        fit: BoxFit.cover,
-                        height: 50.0,
-                        width: 50.0,
-                        image: AssetImage('assets/cover.jpg'),
-                      ),
-                    ),
-                  ),
+                leading: OfflineAudioQuery.offlineArtworkWidget(
+                  id: songs[index].id,
+                  type: ArtworkType.AUDIO,
+                  tempPath: tempPath,
+                  fileName: songs[index].displayNameWOExt,
                 ),
                 // Card(
                 //   elevation: 5,
@@ -916,33 +917,35 @@ class SongsTab extends StatelessWidget {
                 //       }),
                 // ),
                 title: Text(
-                  cachedSongs[index].title.trim() != ''
-                      ? cachedSongs[index].title
-                      : cachedSongs[index].displayNameWOExt,
+                  songs[index].title.trim() != ''
+                      ? songs[index].title
+                      : songs[index].displayNameWOExt,
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
-                  cachedSongs[index]
-                          .artist
-                          ?.replaceAll('<unknown>', 'Unknown') ??
+                  songs[index].artist?.replaceAll('<unknown>', 'Unknown') ??
                       AppLocalizations.of(context)!.unknown,
                   overflow: TextOverflow.ellipsis,
                 ),
                 trailing: PopupMenuButton(
                   icon: const Icon(Icons.more_vert_rounded),
                   shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15.0))),
+                    borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  ),
                   onSelected: (int? value) async {
                     if (value == 0) {
                       AddToOffPlaylist()
-                          .addToOffPlaylist(context, cachedSongs[index].id);
+                          .addToOffPlaylist(context, songs[index].id);
                     }
                     if (value == 1) {
                       await OfflineAudioQuery().removeFromPlaylist(
-                          playlistId: playlistId!,
-                          audioId: cachedSongs[index].id);
-                      ShowSnackBar().showSnackBar(context,
-                          '${AppLocalizations.of(context)!.removedFrom} $playlistName');
+                        playlistId: playlistId!,
+                        audioId: songs[index].id,
+                      );
+                      ShowSnackBar().showSnackBar(
+                        context,
+                        '${AppLocalizations.of(context)!.removedFrom} $playlistName',
+                      );
                     }
                     // if (value == 0) {
                     // showDialog(
@@ -1448,43 +1451,24 @@ class SongsTab extends StatelessWidget {
                     //     ),
                   ],
                 ),
-                onTap: () async {
-                  final int playIndex = cachedSongsMap.indexWhere(
-                      (element) => element['_id'] == cachedSongs[index].id);
-                  if (playIndex == -1) {
-                    final singleSongMap = await OfflineAudioQuery()
-                        .getArtwork([cachedSongs[index]]);
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        opaque: false,
-                        pageBuilder: (_, __, ___) => PlayScreen(
-                          data: {
-                            'response': singleSongMap,
-                            'index': 0,
-                            'offline': true
-                          },
-                          fromMiniplayer: false,
-                        ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      opaque: false,
+                      pageBuilder: (_, __, ___) => PlayScreen(
+                        songsList: songs,
+                        index: index,
+                        offline: true,
+                        fromDownloads: false,
+                        fromMiniplayer: false,
+                        recommend: false,
                       ),
-                    );
-                  } else {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        opaque: false,
-                        pageBuilder: (_, __, ___) => PlayScreen(
-                          data: {
-                            'response': cachedSongsMap,
-                            'index': playIndex,
-                            'offline': true
-                          },
-                          fromMiniplayer: false,
-                        ),
-                      ),
-                    );
-                  }
+                    ),
+                  );
                 },
               );
-            });
+            },
+          );
   }
 }
 

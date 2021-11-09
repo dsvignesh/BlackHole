@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:blackhole/Helpers/config.dart';
+import 'package:blackhole/Helpers/handle_native.dart';
 import 'package:blackhole/Helpers/route_handler.dart';
 import 'package:blackhole/Screens/About/about.dart';
 import 'package:blackhole/Screens/Home/home.dart';
@@ -66,11 +67,13 @@ Future<void> setOptimalDisplayMode() async {
   final DisplayMode active = await FlutterDisplayMode.active;
 
   final List<DisplayMode> sameResolution = supported
-      .where((DisplayMode m) =>
-          m.width == active.width && m.height == active.height)
+      .where(
+        (DisplayMode m) => m.width == active.width && m.height == active.height,
+      )
       .toList()
-    ..sort((DisplayMode a, DisplayMode b) =>
-        b.refreshRate.compareTo(a.refreshRate));
+    ..sort(
+      (DisplayMode a, DisplayMode b) => b.refreshRate.compareTo(a.refreshRate),
+    );
 
   final DisplayMode mostOptimalMode =
       sameResolution.isNotEmpty ? sameResolution.first : active;
@@ -95,33 +98,19 @@ Future<void> startService() async {
 }
 
 Future<void> openHiveBox(String boxName, {bool limit = false}) async {
-  if (limit) {
-    final box = await Hive.openBox(boxName).onError((error, stackTrace) async {
-      final Directory dir = await getApplicationDocumentsDirectory();
-      final String dirPath = dir.path;
-      final File dbFile = File('$dirPath/$boxName.hive');
-      final File lockFile = File('$dirPath/$boxName.lock');
-      await dbFile.delete();
-      await lockFile.delete();
-      await Hive.openBox(boxName);
-      throw 'Failed to open $boxName Box\nError: $error';
-    });
-    // clear box if it grows large
-    if (box.length > 500) {
-      box.clear();
-    }
+  final box = await Hive.openBox(boxName).onError((error, stackTrace) async {
+    final Directory dir = await getApplicationDocumentsDirectory();
+    final String dirPath = dir.path;
+    final File dbFile = File('$dirPath/$boxName.hive');
+    final File lockFile = File('$dirPath/$boxName.lock');
+    await dbFile.delete();
+    await lockFile.delete();
     await Hive.openBox(boxName);
-  } else {
-    await Hive.openBox(boxName).onError((error, stackTrace) async {
-      final Directory dir = await getApplicationDocumentsDirectory();
-      final String dirPath = dir.path;
-      final File dbFile = File('$dirPath/$boxName.hive');
-      final File lockFile = File('$dirPath/$boxName.lock');
-      await dbFile.delete();
-      await lockFile.delete();
-      await Hive.openBox(boxName);
-      throw 'Failed to open $boxName Box\nError: $error';
-    });
+    throw 'Failed to open $boxName Box\nError: $error';
+  });
+  // clear box if it grows large
+  if (limit && box.length > 500) {
+    box.clear();
   }
 }
 
@@ -139,6 +128,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    callIntent();
     final String lang =
         Hive.box('settings').get('lang', defaultValue: 'English') as String;
     final Map<String, String> codes = {
@@ -153,6 +143,10 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> callIntent() async {
+    await NativeMethod.handleIntent();
+  }
+
   void setLocale(Locale value) {
     setState(() {
       _locale = value;
@@ -160,7 +154,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget initialFuntion() {
-    return Hive.box('settings').get('auth') != null ? HomePage() : AuthScreen();
+    return Hive.box('settings').get('userId') != null
+        ? HomePage()
+        : AuthScreen();
   }
 
   @override
@@ -196,8 +192,9 @@ class _MyAppState extends State<MyApp> {
         ),
         inputDecorationTheme: InputDecorationTheme(
           focusedBorder: UnderlineInputBorder(
-              borderSide:
-                  BorderSide(width: 1.5, color: currentTheme.currentColor())),
+            borderSide:
+                BorderSide(width: 1.5, color: currentTheme.currentColor()),
+          ),
         ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: AppBarTheme(
@@ -214,9 +211,10 @@ class _MyAppState extends State<MyApp> {
           size: 24.0,
         ),
         colorScheme: Theme.of(context).colorScheme.copyWith(
-            primary: Colors.grey[800],
-            brightness: Brightness.light,
-            secondary: currentTheme.currentColor()),
+              primary: Colors.grey[800],
+              brightness: Brightness.light,
+              secondary: currentTheme.currentColor(),
+            ),
       ),
       darkTheme: ThemeData(
         textButtonTheme: TextButtonThemeData(
@@ -233,8 +231,9 @@ class _MyAppState extends State<MyApp> {
         ),
         inputDecorationTheme: InputDecorationTheme(
           focusedBorder: UnderlineInputBorder(
-              borderSide:
-                  BorderSide(width: 1.5, color: currentTheme.currentColor())),
+            borderSide:
+                BorderSide(width: 1.5, color: currentTheme.currentColor()),
+          ),
         ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
         brightness: Brightness.dark,

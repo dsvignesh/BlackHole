@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:blackhole/Screens/Library/liked.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -28,7 +30,8 @@ class _LibraryPageState extends State<LibraryPage> {
                 child: IconButton(
                   color: Theme.of(context).iconTheme.color,
                   icon: const Icon(
-                      Icons.horizontal_split_rounded), // line_weight_rounded),
+                    Icons.horizontal_split_rounded,
+                  ),
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
                   },
@@ -58,19 +61,22 @@ class _LibraryPageState extends State<LibraryPage> {
           icon: Icons.favorite_rounded,
           onTap: () {
             Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        const LikedSongs(playlistName: 'Favorite Songs')));
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    const LikedSongs(playlistName: 'Favorite Songs'),
+              ),
+            );
           },
         ),
-        LibraryTile(
-          title: AppLocalizations.of(context)!.myMusic,
-          icon: MdiIcons.folderMusic,
-          onTap: () {
-            Navigator.pushNamed(context, '/mymusic');
-          },
-        ),
+        if (Platform.isAndroid)
+          LibraryTile(
+            title: AppLocalizations.of(context)!.myMusic,
+            icon: MdiIcons.folderMusic,
+            onTap: () {
+              Navigator.pushNamed(context, '/mymusic');
+            },
+          ),
         LibraryTile(
           title: AppLocalizations.of(context)!.downs,
           icon: Icons.download_done_rounded,

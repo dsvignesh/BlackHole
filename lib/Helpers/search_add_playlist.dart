@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+// ignore: avoid_classes_with_only_static_members
 class SearchAddPlaylist {
-  Future<Map> addYtPlaylist(String inLink) async {
+  static Future<Map> addYtPlaylist(String inLink) async {
     final String link = '$inLink&';
     try {
       final RegExpMatch? id = RegExp(r'.*list\=(.*?)&').firstMatch(link);
@@ -31,7 +32,7 @@ class SearchAddPlaylist {
     }
   }
 
-  Stream<Map> songsAdder(String playName, List tracks) async* {
+  static Stream<Map> songsAdder(String playName, List tracks) async* {
     int _done = 0;
     for (final track in tracks) {
       String? trackName;
@@ -51,20 +52,23 @@ class SearchAddPlaylist {
     }
   }
 
-  Future<void> showProgress(
-      int _total, BuildContext cxt, Stream songAdd) async {
+  static Future<void> showProgress(
+    int _total,
+    BuildContext cxt,
+    Stream songAdd,
+  ) async {
     await showModalBottomSheet(
       isDismissible: false,
       backgroundColor: Colors.transparent,
       context: cxt,
       builder: (BuildContext context) {
         return StatefulBuilder(
-            builder: (BuildContext context, StateSetter setStt) {
-          return BottomGradientContainer(
-            child: SizedBox(
-              height: 300,
-              width: 300,
-              child: StreamBuilder<Object>(
+          builder: (BuildContext context, StateSetter setStt) {
+            return BottomGradientContainer(
+              child: SizedBox(
+                height: 300,
+                width: 300,
+                child: StreamBuilder<Object>(
                   stream: songAdd as Stream<Object>?,
                   builder: (ctxt, AsyncSnapshot snapshot) {
                     final Map? data = snapshot.data as Map?;
@@ -76,10 +80,11 @@ class SearchAddPlaylist {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Center(
-                            child: Text(
-                          AppLocalizations.of(context)!.convertingSongs,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        )),
+                          child: Text(
+                            AppLocalizations.of(context)!.convertingSongs,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
                         SizedBox(
                           height: 80,
                           width: 80,
@@ -93,25 +98,30 @@ class SearchAddPlaylist {
                                   height: 77,
                                   width: 77,
                                   child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Theme.of(ctxt).colorScheme.secondary),
-                                      value: _done / _total),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Theme.of(ctxt).colorScheme.secondary,
+                                    ),
+                                    value: _done / _total,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         Center(
-                            child: Text(
-                          name,
-                          textAlign: TextAlign.center,
-                        )),
+                          child: Text(
+                            name,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ],
                     );
-                  }),
-            ),
-          );
-        });
+                  },
+                ),
+              ),
+            );
+          },
+        );
       },
     );
   }

@@ -1,3 +1,4 @@
+import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -77,15 +78,18 @@ class _AboutScreenState extends State<AboutScreen> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: const SizedBox(
-                          width: 150,
-                          child: Image(
-                              image: AssetImage('assets/ic_launcher.png'))),
+                        width: 150,
+                        child:
+                            Image(image: AssetImage('assets/ic_launcher.png')),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       AppLocalizations.of(context)!.appTitle,
                       style: const TextStyle(
-                          fontSize: 35, fontWeight: FontWeight.bold),
+                        fontSize: 35,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text('v$appVersion'),
                   ],
@@ -100,19 +104,21 @@ class _AboutScreenState extends State<AboutScreen> {
                         style: const TextStyle(fontSize: 16),
                       ),
                       TextButton(
-                          onPressed: () {
-                            launch('https://github.com/Sangwan5688/BlackHole');
-                          },
-                          child: SizedBox(
-                            width: MediaQuery.of(context).size.width / 4,
-                            child: Image(
-                              image: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? const AssetImage(
-                                      'assets/GitHub_Logo_White.png')
-                                  : const AssetImage('assets/GitHub_Logo.png'),
-                            ),
-                          )),
+                        onPressed: () {
+                          launch('https://github.com/Sangwan5688/BlackHole');
+                        },
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width / 4,
+                          child: Image(
+                            image: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? const AssetImage(
+                                    'assets/GitHub_Logo_White.png',
+                                  )
+                                : const AssetImage('assets/GitHub_Logo.png'),
+                          ),
+                        ),
+                      ),
                       Text(
                         AppLocalizations.of(context)!.aboutLine2,
                         textAlign: TextAlign.center,
@@ -154,13 +160,24 @@ class _AboutScreenState extends State<AboutScreen> {
                             'upi://pay?pa=8570094149@okbizaxis&pn=BlackHole&mc=5732&aid=uGICAgIDn98OpSw&tr=BCR2DN6T37O6DB3Q';
                         launch(upiUrl);
                       },
+                      onLongPress: () {
+                        copyToClipboard(
+                          context: context,
+                          text: 'ankit.sangwan.5688@oksbi',
+                          displayText: AppLocalizations.of(
+                            context,
+                          )!
+                              .upiCopied,
+                        );
+                      },
                       child: SizedBox(
                         width: MediaQuery.of(context).size.width / 2,
                         child: Image(
                           image: AssetImage(
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? 'assets/gpay-white.png'
-                                  : 'assets/gpay-white.png'),
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 'assets/gpay-white.png'
+                                : 'assets/gpay-white.png',
+                          ),
                         ),
                       ),
                     ),

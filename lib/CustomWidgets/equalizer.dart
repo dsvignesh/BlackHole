@@ -20,10 +20,10 @@ class _EqualizerState extends State<Equalizer> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      // Scaffold(
-      content:
-          // body:
-          SafeArea(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15.0),
+      ),
+      content: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -138,18 +138,19 @@ class _VerticalSliderState extends State<VerticalSlider> {
           height: 400.0,
           alignment: Alignment.center,
           child: Slider(
-              activeColor: Theme.of(context).colorScheme.secondary,
-              inactiveColor:
-                  Theme.of(context).colorScheme.secondary.withOpacity(0.4),
-              value: sliderValue ?? widget.value!,
-              min: widget.min!,
-              max: widget.max!,
-              onChanged: (double newValue) {
-                setState(() {
-                  sliderValue = newValue;
-                  setGain(widget.bandIndex, newValue);
-                });
-              }),
+            activeColor: Theme.of(context).colorScheme.secondary,
+            inactiveColor:
+                Theme.of(context).colorScheme.secondary.withOpacity(0.4),
+            value: sliderValue ?? widget.value!,
+            min: widget.min!,
+            max: widget.max!,
+            onChanged: (double newValue) {
+              setState(() {
+                sliderValue = newValue;
+                setGain(widget.bandIndex, newValue);
+              });
+            },
+          ),
         ),
       ),
     );

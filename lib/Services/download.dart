@@ -32,17 +32,12 @@ class Download with ChangeNotifier {
       Hive.box('settings').get('downloadLyrics', defaultValue: false) as bool;
   bool download = true;
 
-  Future<String> getLyrics(Map data) async {
-    if (data['has_lyrics'] == 'true') {
-      return Lyrics().getSaavnLyrics(data['id'].toString());
-    } else {
-      return Lyrics()
-          .getLyrics(data['title'].toString(), data['artist'].toString());
-    }
-  }
-
-  Future<void> prepareDownload(BuildContext context, Map data,
-      {bool createFolder = false, String? folderName}) async {
+  Future<void> prepareDownload(
+    BuildContext context,
+    Map data, {
+    bool createFolder = false,
+    String? folderName,
+  }) async {
     download = true;
     if (!Platform.isWindows) {
       PermissionStatus status = await Permission.storage.status;
@@ -52,7 +47,6 @@ class Download with ChangeNotifier {
           Permission.accessMediaLocation,
           Permission.mediaLibrary,
         ].request();
-        // debugPrint(statuses[Permission.storage].toString());
       }
       status = await Permission.storage.status;
     }
@@ -113,115 +107,123 @@ class Download with ChangeNotifier {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-                title: Text(
-                  AppLocalizations.of(context)!.alreadyExists,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.secondary),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.alreadyExists,
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '"${data['title']}" ${AppLocalizations.of(context)!.downAgain}',
+                    softWrap: true,
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
+              ),
+              actions: [
+                Column(
                   children: [
-                    Text(
-                      '"${data['title']}" ${AppLocalizations.of(context)!.downAgain}',
-                      softWrap: true,
+                    ValueListenableBuilder(
+                      valueListenable: remember,
+                      builder: (
+                        BuildContext context,
+                        bool rememberValue,
+                        Widget? child,
+                      ) {
+                        return Row(
+                          children: [
+                            Checkbox(
+                              activeColor:
+                                  Theme.of(context).colorScheme.secondary,
+                              value: rememberValue,
+                              onChanged: (bool? value) {
+                                remember.value = value ?? false;
+                              },
+                            ),
+                            Text(
+                              AppLocalizations.of(context)!.rememberChoice,
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                    const SizedBox(
-                      height: 10,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            primary:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                          ),
+                          onPressed: () {
+                            lastDownloadId = data['id'].toString();
+                            Navigator.pop(context);
+                            rememberOption = 0;
+                          },
+                          child: Text(
+                            AppLocalizations.of(context)!.no,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            primary:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.grey[700],
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            Hive.box('downloads').delete(data['id']);
+                            downloadSong(context, dlPath, filename, data);
+                            rememberOption = 1;
+                          },
+                          child: Text(AppLocalizations.of(context)!.yesReplace),
+                        ),
+                        const SizedBox(width: 5.0),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            primary: Colors.white,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.secondary,
+                          ),
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            while (await File('$dlPath/$filename').exists()) {
+                              filename =
+                                  filename.replaceAll('.m4a', ' (1).m4a');
+                            }
+                            rememberOption = 2;
+                            downloadSong(context, dlPath, filename, data);
+                          },
+                          child: Text(
+                            AppLocalizations.of(context)!.yes,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary ==
+                                      Colors.white
+                                  ? Colors.black
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 5,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                actions: [
-                  Column(
-                    children: [
-                      ValueListenableBuilder(
-                          valueListenable: remember,
-                          builder: (BuildContext context, bool value,
-                              Widget? child) {
-                            return Row(
-                              children: [
-                                Checkbox(
-                                  activeColor:
-                                      Theme.of(context).colorScheme.secondary,
-                                  value: remember.value,
-                                  onChanged: (bool? value) {
-                                    remember.value = value ?? false;
-                                  },
-                                ),
-                                Text(AppLocalizations.of(context)!
-                                    .rememberChoice),
-                              ],
-                            );
-                          }),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              primary: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white
-                                  : Colors.grey[700],
-                            ),
-                            onPressed: () {
-                              lastDownloadId = data['id'].toString();
-                              Navigator.pop(context);
-                              rememberOption = 0;
-                            },
-                            child: Text(
-                              AppLocalizations.of(context)!.no,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              primary: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white
-                                  : Colors.grey[700],
-                            ),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              Hive.box('downloads').delete(data['id']);
-                              downloadSong(context, dlPath, filename, data);
-                              rememberOption = 1;
-                            },
-                            child:
-                                Text(AppLocalizations.of(context)!.yesReplace),
-                          ),
-                          const SizedBox(width: 5.0),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              primary: Colors.white,
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.secondary,
-                            ),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              while (await File('$dlPath/$filename').exists()) {
-                                filename =
-                                    filename.replaceAll('.m4a', ' (1).m4a');
-                              }
-                              rememberOption = 2;
-                              downloadSong(context, dlPath, filename, data);
-                            },
-                            child: Text(
-                              AppLocalizations.of(context)!.yes,
-                              style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.secondary ==
-                                              Colors.white
-                                          ? Colors.black
-                                          : null),
-                            ),
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ]);
+              ],
+            );
           },
         );
       }
@@ -231,7 +233,11 @@ class Download with ChangeNotifier {
   }
 
   Future<void> downloadSong(
-      BuildContext context, String? dlPath, String fileName, Map data) async {
+    BuildContext context,
+    String? dlPath,
+    String fileName,
+    Map data,
+  ) async {
     progress = null;
     notifyListeners();
     String? filepath;
@@ -275,7 +281,9 @@ class Download with ChangeNotifier {
     // debugPrint('Image path $filepath2');
 
     final String kUrl = data['url'].toString().replaceAll(
-        '_96.', "_${preferredDownloadQuality.replaceAll(' kbps', '')}.");
+          '_96.',
+          "_${preferredDownloadQuality.replaceAll(' kbps', '')}.",
+        );
     final client = Client();
     final response = await client.send(Request('GET', Uri.parse(kUrl)));
     final int total = response.contentLength ?? 0;
@@ -307,7 +315,14 @@ class Download with ChangeNotifier {
 
         await file2.writeAsBytes(bytes2);
         try {
-          lyrics = downloadLyrics ? await getLyrics(data) : '';
+          lyrics = downloadLyrics
+              ? await Lyrics.getLyrics(
+                  id: data['id'].toString(),
+                  title: data['title'].toString(),
+                  artist: data['artist'].toString(),
+                  saavnHas: data['has_lyrics'] == 'true',
+                )
+              : '';
         } catch (e) {
           // print('Error fetching lyrics: $e');
           lyrics = '';
@@ -354,7 +369,7 @@ class Download with ChangeNotifier {
           artist: data['artist'].toString(),
           albumArtist: data['album_artist']?.toString() ??
               data['artist']?.toString().split(', ')[0],
-          artwork: filepath2.toString(),
+          artwork: filepath2,
           album: data['album'].toString(),
           genre: data['language'].toString(),
           year: data['year'].toString(),
@@ -405,7 +420,7 @@ class Download with ChangeNotifier {
           'path': filepath,
           'image': filepath2,
           'image_url': data['image'].toString(),
-          'fromYt': data['url'].toString().contains('google'),
+          'from_yt': data['language'].toString() == 'YouTube',
           'dateAdded': DateTime.now().toString(),
         };
         Hive.box('downloads').put(songData['id'], songData);

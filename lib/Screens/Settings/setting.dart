@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
+import 'package:blackhole/CustomWidgets/popup.dart';
 import 'package:blackhole/CustomWidgets/snackbar.dart';
 import 'package:blackhole/CustomWidgets/textinput_dialog.dart';
 import 'package:blackhole/Helpers/backup_restore.dart';
@@ -37,6 +39,8 @@ class _SettingPageState extends State<SettingPage> {
       .get('downloadPath', defaultValue: '/storage/emulated/0/Music') as String;
   // List dirPaths =
   // Hive.box('settings').get('blacklistedPaths', defaultValue: []) as List;
+  List blacklistedHomeSections = Hive.box('settings')
+      .get('blacklistedHomeSections', defaultValue: []) as List;
   String streamingQuality = Hive.box('settings')
       .get('streamingQuality', defaultValue: '96 kbps') as String;
   String downloadQuality = Hive.box('settings')
@@ -76,8 +80,19 @@ class _SettingPageState extends State<SettingPage> {
     'Odia',
     'Assamese'
   ];
+  List<String> miniButtons = [
+    'Like',
+    'Previous',
+    'Play/Pause',
+    'Next',
+    'Download'
+  ];
   List preferredLanguage = Hive.box('settings')
       .get('preferredLanguage', defaultValue: ['Hindi'])?.toList() as List;
+  List preferredMiniButtons = Hive.box('settings').get(
+    'preferredMiniButtons',
+    defaultValue: ['Previous', 'Play/Pause', 'Next'],
+  )?.toList() as List;
 
   @override
   void initState() {
@@ -88,7 +103,9 @@ class _SettingPageState extends State<SettingPage> {
   Future<void> main() async {
     final PackageInfo packageInfo = await PackageInfo.fromPlatform();
     appVersion = packageInfo.version;
-    setState(() {});
+    setState(
+      () {},
+    );
   }
 
   bool compareVersion(String latestVersion, String currentVersion) {
@@ -120,136 +137,189 @@ class _SettingPageState extends State<SettingPage> {
 
     return Scaffold(
       // backgroundColor: Colors.transparent,
-      body: CustomScrollView(physics: const BouncingScrollPhysics(), slivers: [
-        SliverAppBar(
-          elevation: 0,
-          stretch: true,
-          pinned: true,
-          backgroundColor: Theme.of(context).brightness == Brightness.light
-              ? Theme.of(context).colorScheme.secondary
-              : null,
-          expandedHeight: MediaQuery.of(context).size.height / 4.5,
-          flexibleSpace: FlexibleSpaceBar(
-            centerTitle: true,
-            background: ShaderMask(
-              shaderCallback: (rect) {
-                return const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black, Colors.transparent],
-                ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
-              },
-              blendMode: BlendMode.dstIn,
-              child: Center(
-                child: Text(
-                  AppLocalizations.of(context)!.settings,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 80,
-                    color: Colors.white,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            elevation: 0,
+            stretch: true,
+            pinned: true,
+            backgroundColor: Theme.of(context).brightness == Brightness.light
+                ? Theme.of(context).colorScheme.secondary
+                : null,
+            expandedHeight: MediaQuery.of(context).size.height / 4.5,
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              background: ShaderMask(
+                shaderCallback: (rect) {
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.black, Colors.transparent],
+                  ).createShader(Rect.fromLTRB(0, 0, rect.width, rect.height));
+                },
+                blendMode: BlendMode.dstIn,
+                child: Center(
+                  child: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!
+                        .settings,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 80,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        SliverList(
-          delegate: SliverChildListDelegate(
-            [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
-                        child: Text(
-                          AppLocalizations.of(context)!.theme,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.secondary,
+          SliverList(
+            delegate: SliverChildListDelegate(
+              [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
+                          child: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .theme,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                         ),
-                      ),
-                      BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.darkMode),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .darkMode,
+                          ),
                           keyName: 'darkMode',
                           defaultValue: true,
                           onChanged: (bool val, Box box) {
-                            box.put('useSystemTheme', false);
+                            box.put(
+                              'useSystemTheme',
+                              false,
+                            );
                             currentTheme.switchTheme(
-                                isDark: val, useSystemTheme: false);
+                              isDark: val,
+                              useSystemTheme: false,
+                            );
                             switchToCustomTheme();
-                          }),
-                      BoxSwitchTile(
+                          },
+                        ),
+                        BoxSwitchTile(
                           title: Text(
-                              AppLocalizations.of(context)!.useSystemTheme),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useSystemTheme,
+                          ),
                           keyName: 'useSystemTheme',
                           defaultValue: true,
                           onChanged: (bool val, Box box) {
                             currentTheme.switchTheme(useSystemTheme: val);
                             switchToCustomTheme();
-                          }),
-                      ListTile(
-                        title: Text(AppLocalizations.of(context)!.accent),
-                        subtitle: Text('$themeColor, $colorHue'),
-                        trailing: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Container(
-                            height: 25,
-                            width: 25,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100.0),
-                              color: Theme.of(context).colorScheme.secondary,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey[900]!,
-                                  blurRadius: 5.0,
-                                  offset: const Offset(0.0, 3.0),
-                                )
-                              ],
+                          },
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .accent,
+                          ),
+                          subtitle: Text('$themeColor, $colorHue'),
+                          trailing: Padding(
+                            padding: const EdgeInsets.all(
+                              10.0,
+                            ),
+                            child: Container(
+                              height: 25,
+                              width: 25,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                  100.0,
+                                ),
+                                color: Theme.of(context).colorScheme.secondary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey[900]!,
+                                    blurRadius: 5.0,
+                                    offset: const Offset(
+                                      0.0,
+                                      3.0,
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        onTap: () {
-                          showModalBottomSheet(
-                            isDismissible: true,
-                            backgroundColor: Colors.transparent,
-                            context: context,
-                            builder: (BuildContext context) {
-                              final List<String> colors = [
-                                'Purple',
-                                'Deep Purple',
-                                'Indigo',
-                                'Blue',
-                                'Light Blue',
-                                'Cyan',
-                                'Teal',
-                                'Green',
-                                'Light Green',
-                                'Lime',
-                                'Yellow',
-                                'Amber',
-                                'Orange',
-                                'Deep Orange',
-                                'Red',
-                                'Pink',
-                                'White',
-                              ];
-                              return BottomGradientContainer(
-                                borderRadius: BorderRadius.circular(20.0),
-                                child: ListView.builder(
+                          onTap: () {
+                            showModalBottomSheet(
+                              isDismissible: true,
+                              backgroundColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                final List<String> colors = [
+                                  'Purple',
+                                  'Deep Purple',
+                                  'Indigo',
+                                  'Blue',
+                                  'Light Blue',
+                                  'Cyan',
+                                  'Teal',
+                                  'Green',
+                                  'Light Green',
+                                  'Lime',
+                                  'Yellow',
+                                  'Amber',
+                                  'Orange',
+                                  'Deep Orange',
+                                  'Red',
+                                  'Pink',
+                                  'White',
+                                ];
+                                return BottomGradientContainer(
+                                  borderRadius: BorderRadius.circular(
+                                    20.0,
+                                  ),
+                                  child: ListView.builder(
                                     shrinkWrap: true,
                                     physics: const BouncingScrollPhysics(),
-                                    padding:
-                                        const EdgeInsets.fromLTRB(0, 10, 0, 10),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      0,
+                                      10,
+                                      0,
+                                      10,
+                                    ),
                                     itemCount: colors.length,
                                     itemBuilder: (context, index) {
                                       return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 15.0),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 15.0,
+                                        ),
                                         child: Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceEvenly,
@@ -261,493 +331,565 @@ class _SettingPageState extends State<SettingPage> {
                                               700
                                             ])
                                               GestureDetector(
-                                                  onTap: () {
-                                                    themeColor = colors[index];
-                                                    colorHue = hue;
-                                                    currentTheme.switchColor(
-                                                        colors[index],
-                                                        colorHue);
-                                                    setState(() {});
-                                                    switchToCustomTheme();
-                                                    Navigator.pop(context);
-                                                  },
-                                                  child: Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    height:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              100.0),
-                                                      color: MyTheme().getColor(
-                                                          colors[index], hue),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color:
-                                                              Colors.grey[900]!,
-                                                          blurRadius: 5.0,
-                                                          offset: const Offset(
-                                                              0.0, 3.0),
-                                                        )
-                                                      ],
+                                                onTap: () {
+                                                  themeColor = colors[index];
+                                                  colorHue = hue;
+                                                  currentTheme.switchColor(
+                                                    colors[index],
+                                                    colorHue,
+                                                  );
+                                                  setState(
+                                                    () {},
+                                                  );
+                                                  switchToCustomTheme();
+                                                  Navigator.pop(context);
+                                                },
+                                                child: Container(
+                                                  width: MediaQuery.of(context)
+                                                          .size
+                                                          .width *
+                                                      0.125,
+                                                  height: MediaQuery.of(context)
+                                                          .size
+                                                          .width *
+                                                      0.125,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      100.0,
                                                     ),
-                                                    child: (themeColor ==
-                                                                colors[index] &&
-                                                            colorHue == hue)
-                                                        ? const Icon(
-                                                            Icons.done_rounded)
-                                                        : const SizedBox(),
-                                                  )),
+                                                    color: MyTheme().getColor(
+                                                      colors[index],
+                                                      hue,
+                                                    ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color:
+                                                            Colors.grey[900]!,
+                                                        blurRadius: 5.0,
+                                                        offset: const Offset(
+                                                          0.0,
+                                                          3.0,
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ),
+                                                  child: (themeColor ==
+                                                              colors[index] &&
+                                                          colorHue == hue)
+                                                      ? const Icon(
+                                                          Icons.done_rounded,
+                                                        )
+                                                      : const SizedBox(),
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       );
-                                    }),
-                              );
-                            },
-                          );
-                        },
-                        dense: true,
-                      ),
-                      Visibility(
-                        visible:
-                            Theme.of(context).brightness == Brightness.dark,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              title: Text(AppLocalizations.of(context)!.bgGrad),
-                              subtitle:
-                                  Text(AppLocalizations.of(context)!.bgGradSub),
-                              trailing: Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Container(
-                                  height: 25,
-                                  width: 25,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(100.0),
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? currentTheme.getBackGradient()
-                                          : [
-                                              Colors.white,
-                                              Theme.of(context).canvasColor,
-                                            ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey[900]!,
-                                        blurRadius: 5.0,
-                                        offset: const Offset(0.0, 3.0),
-                                      )
-                                    ],
+                                    },
                                   ),
-                                ),
-                              ),
-                              onTap: () {
-                                showModalBottomSheet(
-                                  isDismissible: true,
-                                  backgroundColor: Colors.transparent,
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    final List<List<Color>> gradients =
-                                        currentTheme.backOpt;
-                                    return BottomGradientContainer(
-                                      borderRadius: BorderRadius.circular(20.0),
-                                      child: ListView.builder(
-                                          shrinkWrap: true,
-                                          physics:
-                                              const BouncingScrollPhysics(),
-                                          padding: const EdgeInsets.fromLTRB(
-                                              0, 10, 0, 10),
-                                          itemCount: gradients.length,
-                                          itemBuilder: (context, index) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 15.0),
-                                              child: GestureDetector(
-                                                  onTap: () {
-                                                    settingsBox.put(
-                                                        'backGrad', index);
-                                                    currentTheme.backGrad =
-                                                        index;
-                                                    widget.callback!();
-                                                    switchToCustomTheme();
-                                                    Navigator.pop(context);
-                                                    setState(() {});
-                                                  },
-                                                  child: Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    height:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              100.0),
-                                                      gradient: LinearGradient(
-                                                        begin:
-                                                            Alignment.topLeft,
-                                                        end: Alignment
-                                                            .bottomRight,
-                                                        colors:
-                                                            gradients[index],
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color:
-                                                              Colors.grey[900]!,
-                                                          blurRadius: 5.0,
-                                                          offset: const Offset(
-                                                              0.0, 3.0),
-                                                        )
-                                                      ],
-                                                    ),
-                                                    child: (currentTheme
-                                                                .getBackGradient() ==
-                                                            gradients[index])
-                                                        ? const Icon(
-                                                            Icons.done_rounded)
-                                                        : const SizedBox(),
-                                                  )),
-                                            );
-                                          }),
-                                    );
-                                  },
                                 );
                               },
-                              dense: true,
-                            ),
-                            ListTile(
-                              title:
-                                  Text(AppLocalizations.of(context)!.cardGrad),
-                              subtitle: Text(
-                                  AppLocalizations.of(context)!.cardGradSub),
-                              trailing: Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Container(
-                                  height: 25,
-                                  width: 25,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(100.0),
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? currentTheme.getCardGradient()
-                                          : [
-                                              Colors.white,
-                                              Theme.of(context).canvasColor,
-                                            ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey[900]!,
-                                        blurRadius: 5.0,
-                                        offset: const Offset(0.0, 3.0),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              onTap: () {
-                                showModalBottomSheet(
-                                  isDismissible: true,
-                                  backgroundColor: Colors.transparent,
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    final List<List<Color>> gradients =
-                                        currentTheme.cardOpt;
-                                    return BottomGradientContainer(
-                                      borderRadius: BorderRadius.circular(20.0),
-                                      child: ListView.builder(
-                                          shrinkWrap: true,
-                                          physics:
-                                              const BouncingScrollPhysics(),
-                                          padding: const EdgeInsets.fromLTRB(
-                                              0, 10, 0, 10),
-                                          itemCount: gradients.length,
-                                          itemBuilder: (context, index) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 15.0),
-                                              child: GestureDetector(
-                                                  onTap: () {
-                                                    settingsBox.put(
-                                                        'cardGrad', index);
-                                                    currentTheme.cardGrad =
-                                                        index;
-                                                    widget.callback!();
-                                                    switchToCustomTheme();
-                                                    Navigator.pop(context);
-                                                    setState(() {});
-                                                  },
-                                                  child: Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    height:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              100.0),
-                                                      gradient: LinearGradient(
-                                                        begin:
-                                                            Alignment.topLeft,
-                                                        end: Alignment
-                                                            .bottomRight,
-                                                        colors:
-                                                            gradients[index],
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color:
-                                                              Colors.grey[900]!,
-                                                          blurRadius: 5.0,
-                                                          offset: const Offset(
-                                                              0.0, 3.0),
-                                                        )
-                                                      ],
-                                                    ),
-                                                    child: (currentTheme
-                                                                .getCardGradient() ==
-                                                            gradients[index])
-                                                        ? const Icon(
-                                                            Icons.done_rounded)
-                                                        : const SizedBox(),
-                                                  )),
-                                            );
-                                          }),
-                                    );
-                                  },
-                                );
-                              },
-                              dense: true,
-                            ),
-                            ListTile(
-                              title: Text(
-                                  AppLocalizations.of(context)!.bottomGrad),
-                              subtitle: Text(
-                                  AppLocalizations.of(context)!.bottomGradSub),
-                              trailing: Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Container(
-                                  height: 25,
-                                  width: 25,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(100.0),
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? currentTheme.getBottomGradient()
-                                          : [
-                                              Colors.white,
-                                              Theme.of(context).canvasColor,
-                                            ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey[900]!,
-                                        blurRadius: 5.0,
-                                        offset: const Offset(0.0, 3.0),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              onTap: () {
-                                showModalBottomSheet(
-                                  isDismissible: true,
-                                  backgroundColor: Colors.transparent,
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    final List<List<Color>> gradients =
-                                        currentTheme.backOpt;
-                                    return BottomGradientContainer(
-                                      borderRadius: BorderRadius.circular(20.0),
-                                      child: ListView.builder(
-                                          shrinkWrap: true,
-                                          physics:
-                                              const BouncingScrollPhysics(),
-                                          padding: const EdgeInsets.fromLTRB(
-                                              0, 10, 0, 10),
-                                          itemCount: gradients.length,
-                                          itemBuilder: (context, index) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 15.0),
-                                              child: GestureDetector(
-                                                  onTap: () {
-                                                    settingsBox.put(
-                                                        'bottomGrad', index);
-                                                    currentTheme.bottomGrad =
-                                                        index;
-                                                    switchToCustomTheme();
-                                                    Navigator.pop(context);
-                                                    setState(() {});
-                                                  },
-                                                  child: Container(
-                                                    width:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    height:
-                                                        MediaQuery.of(context)
-                                                                .size
-                                                                .width *
-                                                            0.125,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              100.0),
-                                                      gradient: LinearGradient(
-                                                        begin:
-                                                            Alignment.topLeft,
-                                                        end: Alignment
-                                                            .bottomRight,
-                                                        colors:
-                                                            gradients[index],
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color:
-                                                              Colors.grey[900]!,
-                                                          blurRadius: 5.0,
-                                                          offset: const Offset(
-                                                              0.0, 3.0),
-                                                        )
-                                                      ],
-                                                    ),
-                                                    child: (currentTheme
-                                                                .getBottomGradient() ==
-                                                            gradients[index])
-                                                        ? const Icon(
-                                                            Icons.done_rounded)
-                                                        : const SizedBox(),
-                                                  )),
-                                            );
-                                          }),
-                                    );
-                                  },
-                                );
-                              },
-                              dense: true,
-                            ),
-                            ListTile(
-                              title: Text(
-                                  AppLocalizations.of(context)!.canvasColor),
-                              subtitle: Text(
-                                  AppLocalizations.of(context)!.canvasColorSub),
-                              onTap: () {},
-                              trailing: DropdownButton(
-                                value: canvasColor,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyText1!
-                                      .color,
-                                ),
-                                underline: const SizedBox(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    switchToCustomTheme();
-                                    setState(() {
-                                      currentTheme.switchCanvasColor(newValue);
-                                      canvasColor = newValue;
-                                    });
-                                  }
-                                },
-                                items: <String>[
-                                  'Grey',
-                                  'Black'
-                                ].map<DropdownMenuItem<String>>((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                              ),
-                              dense: true,
-                            ),
-                            ListTile(
-                              title:
-                                  Text(AppLocalizations.of(context)!.cardColor),
-                              subtitle: Text(
-                                  AppLocalizations.of(context)!.cardColorSub),
-                              onTap: () {},
-                              trailing: DropdownButton(
-                                value: cardColor,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyText1!
-                                      .color,
-                                ),
-                                underline: const SizedBox(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    switchToCustomTheme();
-                                    setState(() {
-                                      currentTheme.switchCardColor(newValue);
-                                      cardColor = newValue;
-                                    });
-                                  }
-                                },
-                                items: <String>[
-                                  'Grey800',
-                                  'Grey850',
-                                  'Grey900',
-                                  'Black'
-                                ].map<DropdownMenuItem<String>>((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                              ),
-                              dense: true,
-                            ),
-                          ],
+                            );
+                          },
+                          dense: true,
                         ),
-                      ),
-                      ListTile(
-                          title: Text(AppLocalizations.of(context)!.useAmoled),
+                        Visibility(
+                          visible:
+                              Theme.of(context).brightness == Brightness.dark,
+                          child: Column(
+                            children: [
+                              ListTile(
+                                title: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .bgGrad,
+                                ),
+                                subtitle: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .bgGradSub,
+                                ),
+                                trailing: Padding(
+                                  padding: const EdgeInsets.all(
+                                    10.0,
+                                  ),
+                                  child: Container(
+                                    height: 25,
+                                    width: 25,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                        100.0,
+                                      ),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? currentTheme.getBackGradient()
+                                            : [
+                                                Colors.white,
+                                                Theme.of(context).canvasColor,
+                                              ],
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.white24,
+                                          blurRadius: 5.0,
+                                          offset: Offset(
+                                            0.0,
+                                            3.0,
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                onTap: () {
+                                  final List<List<Color>> gradients =
+                                      currentTheme.backOpt;
+                                  PopupDialog().showPopup(
+                                    context: context,
+                                    child: SizedBox(
+                                      width: 500,
+                                      child: ListView.builder(
+                                        shrinkWrap: true,
+                                        physics: const BouncingScrollPhysics(),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          0,
+                                          30,
+                                          0,
+                                          10,
+                                        ),
+                                        itemCount: gradients.length,
+                                        itemBuilder: (context, index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 20.0,
+                                              right: 20.0,
+                                              bottom: 15.0,
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                settingsBox.put(
+                                                  'backGrad',
+                                                  index,
+                                                );
+                                                currentTheme.backGrad = index;
+                                                widget.callback!();
+                                                switchToCustomTheme();
+                                                Navigator.pop(context);
+                                                setState(
+                                                  () {},
+                                                );
+                                              },
+                                              child: Container(
+                                                width: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    15.0,
+                                                  ),
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: gradients[index],
+                                                  ),
+                                                ),
+                                                child: (currentTheme
+                                                            .getBackGradient() ==
+                                                        gradients[index])
+                                                    ? const Icon(
+                                                        Icons.done_rounded,
+                                                      )
+                                                    : const SizedBox(),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                dense: true,
+                              ),
+                              ListTile(
+                                title: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cardGrad,
+                                ),
+                                subtitle: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cardGradSub,
+                                ),
+                                trailing: Padding(
+                                  padding: const EdgeInsets.all(
+                                    10.0,
+                                  ),
+                                  child: Container(
+                                    height: 25,
+                                    width: 25,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                        100.0,
+                                      ),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? currentTheme.getCardGradient()
+                                            : [
+                                                Colors.white,
+                                                Theme.of(context).canvasColor,
+                                              ],
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.white24,
+                                          blurRadius: 5.0,
+                                          offset: Offset(
+                                            0.0,
+                                            3.0,
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                onTap: () {
+                                  final List<List<Color>> gradients =
+                                      currentTheme.cardOpt;
+                                  PopupDialog().showPopup(
+                                    context: context,
+                                    child: SizedBox(
+                                      width: 500,
+                                      child: ListView.builder(
+                                        shrinkWrap: true,
+                                        physics: const BouncingScrollPhysics(),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          0,
+                                          30,
+                                          0,
+                                          10,
+                                        ),
+                                        itemCount: gradients.length,
+                                        itemBuilder: (context, index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 20.0,
+                                              right: 20.0,
+                                              bottom: 15.0,
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                settingsBox.put(
+                                                  'cardGrad',
+                                                  index,
+                                                );
+                                                currentTheme.cardGrad = index;
+                                                widget.callback!();
+                                                switchToCustomTheme();
+                                                Navigator.pop(context);
+                                                setState(
+                                                  () {},
+                                                );
+                                              },
+                                              child: Container(
+                                                width: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    15.0,
+                                                  ),
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: gradients[index],
+                                                  ),
+                                                ),
+                                                child: (currentTheme
+                                                            .getCardGradient() ==
+                                                        gradients[index])
+                                                    ? const Icon(
+                                                        Icons.done_rounded,
+                                                      )
+                                                    : const SizedBox(),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                dense: true,
+                              ),
+                              ListTile(
+                                title: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .bottomGrad,
+                                ),
+                                subtitle: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .bottomGradSub,
+                                ),
+                                trailing: Padding(
+                                  padding: const EdgeInsets.all(
+                                    10.0,
+                                  ),
+                                  child: Container(
+                                    height: 25,
+                                    width: 25,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                        100.0,
+                                      ),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? currentTheme.getBottomGradient()
+                                            : [
+                                                Colors.white,
+                                                Theme.of(context).canvasColor,
+                                              ],
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.white24,
+                                          blurRadius: 5.0,
+                                          offset: Offset(
+                                            0.0,
+                                            3.0,
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                onTap: () {
+                                  final List<List<Color>> gradients =
+                                      currentTheme.backOpt;
+                                  PopupDialog().showPopup(
+                                    context: context,
+                                    child: SizedBox(
+                                      width: 500,
+                                      child: ListView.builder(
+                                        shrinkWrap: true,
+                                        physics: const BouncingScrollPhysics(),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          0,
+                                          30,
+                                          0,
+                                          10,
+                                        ),
+                                        itemCount: gradients.length,
+                                        itemBuilder: (context, index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 20.0,
+                                              right: 20.0,
+                                              bottom: 15.0,
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                settingsBox.put(
+                                                  'bottomGrad',
+                                                  index,
+                                                );
+                                                currentTheme.bottomGrad = index;
+                                                switchToCustomTheme();
+                                                Navigator.pop(context);
+                                                setState(
+                                                  () {},
+                                                );
+                                              },
+                                              child: Container(
+                                                width: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.125,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    15.0,
+                                                  ),
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: gradients[index],
+                                                  ),
+                                                ),
+                                                child: (currentTheme
+                                                            .getBottomGradient() ==
+                                                        gradients[index])
+                                                    ? const Icon(
+                                                        Icons.done_rounded,
+                                                      )
+                                                    : const SizedBox(),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                dense: true,
+                              ),
+                              ListTile(
+                                title: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .canvasColor,
+                                ),
+                                subtitle: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .canvasColorSub,
+                                ),
+                                onTap: () {},
+                                trailing: DropdownButton(
+                                  value: canvasColor,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyText1!
+                                        .color,
+                                  ),
+                                  underline: const SizedBox(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      switchToCustomTheme();
+                                      setState(
+                                        () {
+                                          currentTheme
+                                              .switchCanvasColor(newValue);
+                                          canvasColor = newValue;
+                                        },
+                                      );
+                                    }
+                                  },
+                                  items: <String>['Grey', 'Black']
+                                      .map<DropdownMenuItem<String>>(
+                                          (String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                ),
+                                dense: true,
+                              ),
+                              ListTile(
+                                title: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cardColor,
+                                ),
+                                subtitle: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cardColorSub,
+                                ),
+                                onTap: () {},
+                                trailing: DropdownButton(
+                                  value: cardColor,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyText1!
+                                        .color,
+                                  ),
+                                  underline: const SizedBox(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      switchToCustomTheme();
+                                      setState(
+                                        () {
+                                          currentTheme
+                                              .switchCardColor(newValue);
+                                          cardColor = newValue;
+                                        },
+                                      );
+                                    }
+                                  },
+                                  items: <String>[
+                                    'Grey800',
+                                    'Grey850',
+                                    'Grey900',
+                                    'Black'
+                                  ].map<DropdownMenuItem<String>>(
+                                      (String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                ),
+                                dense: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useAmoled,
+                          ),
                           dense: true,
                           onTap: () {
                             currentTheme.switchTheme(
-                                useSystemTheme: false, isDark: true);
+                              useSystemTheme: false,
+                              isDark: true,
+                            );
                             Hive.box('settings').put('darkMode', true);
 
                             settingsBox.put('backGrad', 4);
@@ -765,362 +907,776 @@ class _SettingPageState extends State<SettingPage> {
 
                             themeColor = 'White';
                             colorHue = 400;
-                            currentTheme.switchColor('White', colorHue);
-                          }),
-                      ListTile(
-                        title: Text(AppLocalizations.of(context)!.currentTheme),
-                        trailing: DropdownButton(
-                          value: theme,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).textTheme.bodyText1!.color,
+                            currentTheme.switchColor(
+                              'White',
+                              colorHue,
+                            );
+                          },
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .currentTheme,
                           ),
-                          underline: const SizedBox(),
-                          onChanged: (String? themeChoice) {
-                            if (themeChoice != null) {
-                              const deflt = 'Default';
+                          trailing: DropdownButton(
+                            value: theme,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(context).textTheme.bodyText1!.color,
+                            ),
+                            underline: const SizedBox(),
+                            onChanged: (String? themeChoice) {
+                              if (themeChoice != null) {
+                                const deflt = 'Default';
 
-                              currentTheme.setInitialTheme(themeChoice);
+                                currentTheme.setInitialTheme(themeChoice);
 
-                              setState(() {
-                                theme = themeChoice;
-                                if (themeChoice == 'Custom') return;
-                                final selectedTheme = userThemes[themeChoice];
+                                setState(
+                                  () {
+                                    theme = themeChoice;
+                                    if (themeChoice == 'Custom') return;
+                                    final selectedTheme =
+                                        userThemes[themeChoice];
 
-                                settingsBox.put(
-                                  'backGrad',
-                                  themeChoice == deflt
-                                      ? 1
-                                      : selectedTheme['backGrad'],
-                                );
-                                currentTheme.backGrad = themeChoice == deflt
-                                    ? 1
-                                    : selectedTheme['backGrad'] as int;
+                                    settingsBox.put(
+                                      'backGrad',
+                                      themeChoice == deflt
+                                          ? 1
+                                          : selectedTheme['backGrad'],
+                                    );
+                                    currentTheme.backGrad = themeChoice == deflt
+                                        ? 1
+                                        : selectedTheme['backGrad'] as int;
 
-                                settingsBox.put(
-                                  'cardGrad',
-                                  themeChoice == deflt
-                                      ? 3
-                                      : selectedTheme['cardGrad'],
-                                );
-                                currentTheme.cardGrad = themeChoice == deflt
-                                    ? 3
-                                    : selectedTheme['cardGrad'] as int;
+                                    settingsBox.put(
+                                      'cardGrad',
+                                      themeChoice == deflt
+                                          ? 3
+                                          : selectedTheme['cardGrad'],
+                                    );
+                                    currentTheme.cardGrad = themeChoice == deflt
+                                        ? 3
+                                        : selectedTheme['cardGrad'] as int;
 
-                                settingsBox.put(
-                                  'bottomGrad',
-                                  themeChoice == deflt
-                                      ? 2
-                                      : selectedTheme['bottomGrad'],
-                                );
-                                currentTheme.bottomGrad = themeChoice == deflt
-                                    ? 2
-                                    : selectedTheme['bottomGrad'] as int;
+                                    settingsBox.put(
+                                      'bottomGrad',
+                                      themeChoice == deflt
+                                          ? 2
+                                          : selectedTheme['bottomGrad'],
+                                    );
+                                    currentTheme.bottomGrad = themeChoice ==
+                                            deflt
+                                        ? 2
+                                        : selectedTheme['bottomGrad'] as int;
 
-                                currentTheme.switchCanvasColor(
-                                    themeChoice == deflt
+                                    currentTheme.switchCanvasColor(
+                                      themeChoice == deflt
+                                          ? 'Grey'
+                                          : selectedTheme['canvasColor']
+                                              as String,
+                                      notify: false,
+                                    );
+                                    canvasColor = themeChoice == deflt
                                         ? 'Grey'
                                         : selectedTheme['canvasColor']
-                                            as String,
-                                    notify: false);
-                                canvasColor = themeChoice == deflt
-                                    ? 'Grey'
-                                    : selectedTheme['canvasColor'] as String;
+                                            as String;
 
-                                currentTheme.switchCardColor(
-                                    themeChoice == deflt
+                                    currentTheme.switchCardColor(
+                                      themeChoice == deflt
+                                          ? 'Grey850'
+                                          : selectedTheme['cardColor']
+                                              as String,
+                                      notify: false,
+                                    );
+                                    cardColor = themeChoice == deflt
                                         ? 'Grey850'
-                                        : selectedTheme['cardColor'] as String,
-                                    notify: false);
-                                cardColor = themeChoice == deflt
-                                    ? 'Grey850'
-                                    : selectedTheme['cardColor'] as String;
+                                        : selectedTheme['cardColor'] as String;
 
-                                themeColor = themeChoice == deflt
-                                    ? 'Teal'
-                                    : selectedTheme['accentColor'] as String;
-                                colorHue = themeChoice == deflt
-                                    ? 400
-                                    : selectedTheme['colorHue'] as int;
+                                    themeColor = themeChoice == deflt
+                                        ? 'Teal'
+                                        : selectedTheme['accentColor']
+                                            as String;
+                                    colorHue = themeChoice == deflt
+                                        ? 400
+                                        : selectedTheme['colorHue'] as int;
 
-                                currentTheme.switchColor(
-                                  themeColor,
-                                  colorHue,
-                                  notify: false,
+                                    currentTheme.switchColor(
+                                      themeColor,
+                                      colorHue,
+                                      notify: false,
+                                    );
+
+                                    currentTheme.switchTheme(
+                                      useSystemTheme: !(themeChoice == deflt) &&
+                                          selectedTheme['useSystemTheme']
+                                              as bool,
+                                      isDark: themeChoice == deflt ||
+                                          selectedTheme['isDark'] as bool,
+                                    );
+                                  },
                                 );
-
-                                currentTheme.switchTheme(
-                                  useSystemTheme: !(themeChoice == deflt) &&
-                                      selectedTheme['useSystemTheme'] as bool,
-                                  isDark: themeChoice == deflt ||
-                                      selectedTheme['isDark'] as bool,
-                                );
-                              });
-                            }
-                          },
-                          selectedItemBuilder: (BuildContext context) {
-                            return userThemesList.map<Widget>((String item) {
-                              return Text(item);
-                            }).toList();
-                          },
-                          items: userThemesList.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    flex: 2,
-                                    child: Text(
-                                      value,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (value != 'Default' && value != 'Custom')
+                              }
+                            },
+                            selectedItemBuilder: (BuildContext context) {
+                              return userThemesList.map<Widget>((String item) {
+                                return Text(item);
+                              }).toList();
+                            },
+                            items: userThemesList.map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
                                     Flexible(
-                                      child: IconButton(
-                                        //padding: EdgeInsets.zero,
-                                        iconSize: 18,
-                                        splashRadius: 18,
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          showDialog(
-                                            context: context,
-                                            builder: (BuildContext context) =>
-                                                AlertDialog(
-                                              title: Text(
-                                                AppLocalizations.of(context)!
-                                                    .deleteTheme,
-                                                style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .secondary,
-                                                ),
-                                              ),
-                                              content: Text(
-                                                  '${AppLocalizations.of(context)!.deleteThemeSubtitle} $value?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      Navigator.of(context).pop,
-                                                  child: Text(
-                                                      AppLocalizations.of(
-                                                              context)!
-                                                          .cancel),
-                                                ),
-                                                TextButton(
-                                                  style: TextButton.styleFrom(
-                                                    primary: Theme.of(context)
-                                                                .colorScheme
-                                                                .secondary ==
-                                                            Colors.white
-                                                        ? Colors.black
-                                                        : null,
-                                                    backgroundColor:
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .secondary,
-                                                  ),
-                                                  onPressed: () {
-                                                    currentTheme
-                                                        .deleteTheme(value);
-                                                    if (currentTheme
-                                                            .getInitialTheme() ==
-                                                        value) {
-                                                      currentTheme
-                                                          .setInitialTheme(
-                                                              'Custom');
-                                                      theme = 'Custom';
-                                                    }
-                                                    setState(() {
-                                                      userThemes = currentTheme
-                                                          .getThemes();
-                                                    });
-                                                    ShowSnackBar().showSnackBar(
-                                                      context,
-                                                      AppLocalizations.of(
-                                                              context)!
-                                                          .themeDeleted,
-                                                    );
-                                                    return Navigator.of(context)
-                                                        .pop();
-                                                  },
-                                                  child: Text(
-                                                    AppLocalizations.of(
-                                                            context)!
-                                                        .delete,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 5.0),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        icon: const Icon(
-                                          Icons.delete_rounded,
-                                        ),
+                                      flex: 2,
+                                      child: Text(
+                                        value,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    )
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          isDense: true,
-                        ),
-                        dense: true,
-                      ),
-                      Visibility(
-                        visible: theme == 'Custom',
-                        child: ListTile(
-                          title: Text(AppLocalizations.of(context)!.saveTheme),
-                          onTap: () {
-                            final initialThemeName =
-                                '${AppLocalizations.of(context)!.theme} ${userThemes.length + 1}';
-                            TextInputDialog().showTextInputDialog(
-                              context: context,
-                              title:
-                                  AppLocalizations.of(context)!.enterThemeName,
-                              onSubmitted: (value) {
-                                if (value == '') return;
-                                currentTheme.saveTheme(value);
-                                currentTheme.setInitialTheme(value);
-                                setState(() {
-                                  userThemes = currentTheme.getThemes();
-                                  theme = value;
-                                });
-                                ShowSnackBar().showSnackBar(
-                                  context,
-                                  AppLocalizations.of(context)!.themeSaved,
-                                );
-                                Navigator.of(context).pop();
-                              },
-                              keyboardType: TextInputType.text,
-                              initialText: initialThemeName,
-                            );
-                          },
+                                    ),
+                                    if (value != 'Default' && value != 'Custom')
+                                      Flexible(
+                                        child: IconButton(
+                                          //padding: EdgeInsets.zero,
+                                          iconSize: 18,
+                                          splashRadius: 18,
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                            showDialog(
+                                              context: context,
+                                              builder: (BuildContext context) =>
+                                                  AlertDialog(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    10.0,
+                                                  ),
+                                                ),
+                                                title: Text(
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!
+                                                      .deleteTheme,
+                                                  style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .secondary,
+                                                  ),
+                                                ),
+                                                content: Text(
+                                                  '${AppLocalizations.of(
+                                                    context,
+                                                  )!.deleteThemeSubtitle} $value?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        Navigator.of(context)
+                                                            .pop,
+                                                    child: Text(
+                                                      AppLocalizations.of(
+                                                        context,
+                                                      )!
+                                                          .cancel,
+                                                    ),
+                                                  ),
+                                                  TextButton(
+                                                    style: TextButton.styleFrom(
+                                                      primary: Theme.of(context)
+                                                                  .colorScheme
+                                                                  .secondary ==
+                                                              Colors.white
+                                                          ? Colors.black
+                                                          : null,
+                                                      backgroundColor:
+                                                          Theme.of(context)
+                                                              .colorScheme
+                                                              .secondary,
+                                                    ),
+                                                    onPressed: () {
+                                                      currentTheme
+                                                          .deleteTheme(value);
+                                                      if (currentTheme
+                                                              .getInitialTheme() ==
+                                                          value) {
+                                                        currentTheme
+                                                            .setInitialTheme(
+                                                          'Custom',
+                                                        );
+                                                        theme = 'Custom';
+                                                      }
+                                                      setState(
+                                                        () {
+                                                          userThemes =
+                                                              currentTheme
+                                                                  .getThemes();
+                                                        },
+                                                      );
+                                                      ShowSnackBar()
+                                                          .showSnackBar(
+                                                        context,
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        )!
+                                                            .themeDeleted,
+                                                      );
+                                                      return Navigator.of(
+                                                        context,
+                                                      ).pop();
+                                                    },
+                                                    child: Text(
+                                                      AppLocalizations.of(
+                                                        context,
+                                                      )!
+                                                          .delete,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 5.0,
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.delete_rounded,
+                                          ),
+                                        ),
+                                      )
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            isDense: true,
+                          ),
                           dense: true,
                         ),
-                      )
-                    ],
+                        Visibility(
+                          visible: theme == 'Custom',
+                          child: ListTile(
+                            title: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!
+                                  .saveTheme,
+                            ),
+                            onTap: () {
+                              final initialThemeName = '${AppLocalizations.of(
+                                context,
+                              )!.theme} ${userThemes.length + 1}';
+                              showTextInputDialog(
+                                context: context,
+                                title: AppLocalizations.of(
+                                  context,
+                                )!
+                                    .enterThemeName,
+                                onSubmitted: (value) {
+                                  if (value == '') return;
+                                  currentTheme.saveTheme(value);
+                                  currentTheme.setInitialTheme(value);
+                                  setState(
+                                    () {
+                                      userThemes = currentTheme.getThemes();
+                                      theme = value;
+                                    },
+                                  );
+                                  ShowSnackBar().showSnackBar(
+                                    context,
+                                    AppLocalizations.of(
+                                      context,
+                                    )!
+                                        .themeSaved,
+                                  );
+                                  Navigator.of(context).pop();
+                                },
+                                keyboardType: TextInputType.text,
+                                initialText: initialThemeName,
+                              );
+                            },
+                            dense: true,
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
-                        child: Text(
-                          AppLocalizations.of(context)!.ui,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.secondary,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
+                          child: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .ui,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                         ),
-                      ),
-                      BoxSwitchTile(
-                        title: Text(AppLocalizations.of(context)!.useDominant),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.useDominantSub),
-                        keyName: 'useImageColor',
-                        defaultValue: true,
-                        isThreeLine: false,
-                      ),
-                      BoxSwitchTile(
-                        title: Text(AppLocalizations.of(context)!.useDenseMini),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.useDenseMiniSub),
-                        keyName: 'useDenseMini',
-                        defaultValue: false,
-                        isThreeLine: false,
-                      ),
-                      BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.showLast),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.showLastSub),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDominant,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDominantSub,
+                          ),
+                          keyName: 'useImageColor',
+                          defaultValue: true,
+                          isThreeLine: false,
+                        ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDenseMini,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDenseMiniSub,
+                          ),
+                          keyName: 'useDenseMini',
+                          defaultValue: false,
+                          isThreeLine: false,
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .miniButtons,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .miniButtonsSub,
+                          ),
+                          dense: true,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                final List checked =
+                                    List.from(preferredMiniButtons);
+                                return StatefulBuilder(
+                                  builder: (
+                                    BuildContext context,
+                                    StateSetter setStt,
+                                  ) {
+                                    return AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          15.0,
+                                        ),
+                                      ),
+                                      content: SizedBox(
+                                        width: 500,
+                                        child: ReorderableListView(
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          shrinkWrap: true,
+                                          padding: const EdgeInsets.fromLTRB(
+                                            0,
+                                            10,
+                                            0,
+                                            10,
+                                          ),
+                                          onReorder:
+                                              (int oldIndex, int newIndex) {
+                                            if (oldIndex < newIndex) {
+                                              newIndex--;
+                                            }
+                                            final temp = checked.removeAt(
+                                              oldIndex,
+                                            );
+                                            checked.insert(newIndex, temp);
+                                            setStt(
+                                              () {},
+                                            );
+                                          },
+                                          children: miniButtons.map((e) {
+                                            return CheckboxListTile(
+                                              key: Key(e),
+                                              activeColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
+                                              checkColor: Theme.of(context)
+                                                          .colorScheme
+                                                          .secondary ==
+                                                      Colors.white
+                                                  ? Colors.black
+                                                  : null,
+                                              value: checked.contains(e),
+                                              title: Text(e),
+                                              onChanged: (bool? value) {
+                                                setStt(
+                                                  () {
+                                                    value!
+                                                        ? checked.add(e)
+                                                        : checked.remove(e);
+                                                  },
+                                                );
+                                              },
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          style: TextButton.styleFrom(
+                                            primary:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.grey[700],
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!
+                                                .cancel,
+                                          ),
+                                        ),
+                                        TextButton(
+                                          style: TextButton.styleFrom(
+                                            primary: Theme.of(context)
+                                                        .colorScheme
+                                                        .secondary ==
+                                                    Colors.white
+                                                ? Colors.black
+                                                : null,
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
+                                          ),
+                                          onPressed: () {
+                                            setState(
+                                              () {
+                                                preferredMiniButtons = checked;
+                                                Navigator.pop(context);
+                                                Hive.box('settings').put(
+                                                  'preferredMiniButtons',
+                                                  preferredMiniButtons,
+                                                );
+                                              },
+                                            );
+                                          },
+                                          child: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!
+                                                .ok,
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          width: 5,
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .blacklistedHomeSections,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .blacklistedHomeSectionsSub,
+                          ),
+                          dense: true,
+                          onTap: () {
+                            final GlobalKey<AnimatedListState> _listKey =
+                                GlobalKey<AnimatedListState>();
+                            showModalBottomSheet(
+                              isDismissible: true,
+                              backgroundColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                return BottomGradientContainer(
+                                  borderRadius: BorderRadius.circular(
+                                    20.0,
+                                  ),
+                                  child: AnimatedList(
+                                    physics: const BouncingScrollPhysics(),
+                                    shrinkWrap: true,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      0,
+                                      10,
+                                      0,
+                                      10,
+                                    ),
+                                    key: _listKey,
+                                    initialItemCount:
+                                        blacklistedHomeSections.length + 1,
+                                    itemBuilder: (cntxt, idx, animation) {
+                                      return (idx == 0)
+                                          ? ListTile(
+                                              title: Text(
+                                                AppLocalizations.of(context)!
+                                                    .addNew,
+                                              ),
+                                              leading: const Icon(
+                                                CupertinoIcons.add,
+                                              ),
+                                              onTap: () async {
+                                                showTextInputDialog(
+                                                  context: context,
+                                                  title: AppLocalizations.of(
+                                                    context,
+                                                  )!
+                                                      .enterText,
+                                                  keyboardType:
+                                                      TextInputType.text,
+                                                  onSubmitted: (String value) {
+                                                    Navigator.pop(context);
+                                                    blacklistedHomeSections.add(
+                                                      value
+                                                          .trim()
+                                                          .toLowerCase(),
+                                                    );
+                                                    Hive.box('settings').put(
+                                                      'blacklistedHomeSections',
+                                                      blacklistedHomeSections,
+                                                    );
+                                                    _listKey.currentState!
+                                                        .insertItem(
+                                                      blacklistedHomeSections
+                                                          .length,
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                            )
+                                          : SizeTransition(
+                                              sizeFactor: animation,
+                                              child: ListTile(
+                                                leading: const Icon(
+                                                  CupertinoIcons.folder,
+                                                ),
+                                                title: Text(
+                                                  blacklistedHomeSections[
+                                                          idx - 1]
+                                                      .toString(),
+                                                ),
+                                                trailing: IconButton(
+                                                  icon: const Icon(
+                                                    CupertinoIcons.clear,
+                                                    size: 15.0,
+                                                  ),
+                                                  tooltip: 'Remove',
+                                                  onPressed: () {
+                                                    blacklistedHomeSections
+                                                        .removeAt(idx - 1);
+                                                    Hive.box('settings').put(
+                                                      'blacklistedHomeSections',
+                                                      blacklistedHomeSections,
+                                                    );
+                                                    _listKey.currentState!
+                                                        .removeItem(
+                                                      idx,
+                                                      (
+                                                        context,
+                                                        animation,
+                                                      ) =>
+                                                          Container(),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .showLast,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .showLastSub,
+                          ),
                           keyName: 'showRecent',
                           defaultValue: true,
                           onChanged: (val, box) {
                             widget.callback!();
-                          }),
-                      BoxSwitchTile(
-                        title: Text(AppLocalizations.of(context)!.showHistory),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.showHistorySub),
-                        keyName: 'showHistory',
-                        defaultValue: true,
-                      ),
-                      BoxSwitchTile(
-                        title:
-                            Text(AppLocalizations.of(context)!.enableGesture),
-                        subtitle: Text(
-                            AppLocalizations.of(context)!.enableGestureSub),
-                        keyName: 'enableGesture',
-                        defaultValue: true,
-                      ),
-                    ],
+                          },
+                        ),
+                        // BoxSwitchTile(
+                        //   title: Text(
+                        //     AppLocalizations.of(
+                        //       context,
+                        //     )!
+                        //         .showHistory,
+                        //   ),
+                        //   subtitle: Text(
+                        //     AppLocalizations.of(
+                        //       context,
+                        //     )!
+                        //         .showHistorySub,
+                        //   ),
+                        //   keyName: 'showHistory',
+                        //   defaultValue: true,
+                        // ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .enableGesture,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .enableGestureSub,
+                          ),
+                          keyName: 'enableGesture',
+                          defaultValue: true,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
-                        child: Text(
-                          AppLocalizations.of(context)!.musicPlayback,
-                          style: TextStyle(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
+                          child: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .musicPlayback,
+                            style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.secondary),
-                        ),
-                      ),
-                      ListTile(
-                        title: Text(AppLocalizations.of(context)!.musicLang),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.musicLangSub),
-                        trailing: SizedBox(
-                          width: 150,
-                          child: Text(
-                            preferredLanguage.isEmpty
-                                ? 'None'
-                                : preferredLanguage.join(', '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.end,
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                         ),
-                        dense: true,
-                        onTap: () {
-                          showModalBottomSheet(
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .musicLang,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .musicLangSub,
+                          ),
+                          trailing: SizedBox(
+                            width: 150,
+                            child: Text(
+                              preferredLanguage.isEmpty
+                                  ? 'None'
+                                  : preferredLanguage.join(', '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                          dense: true,
+                          onTap: () {
+                            showModalBottomSheet(
                               isDismissible: true,
                               backgroundColor: Colors.transparent,
                               context: context,
                               builder: (BuildContext context) {
                                 final List checked =
                                     List.from(preferredLanguage);
-                                return StatefulBuilder(builder:
-                                    (BuildContext context, StateSetter setStt) {
-                                  return BottomGradientContainer(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: ListView.builder(
+                                return StatefulBuilder(
+                                  builder: (
+                                    BuildContext context,
+                                    StateSetter setStt,
+                                  ) {
+                                    return BottomGradientContainer(
+                                      borderRadius: BorderRadius.circular(
+                                        20.0,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Expanded(
+                                            child: ListView.builder(
                                               physics:
                                                   const BouncingScrollPhysics(),
                                               shrinkWrap: true,
                                               padding:
                                                   const EdgeInsets.fromLTRB(
-                                                      0, 10, 0, 10),
+                                                0,
+                                                10,
+                                                0,
+                                                10,
+                                              ),
                                               itemCount: languages.length,
                                               itemBuilder: (context, idx) {
                                                 return CheckboxListTile(
@@ -1133,87 +1689,116 @@ class _SettingPageState extends State<SettingPage> {
                                                           Colors.white
                                                       ? Colors.black
                                                       : null,
-                                                  value: checked
-                                                      .contains(languages[idx]),
-                                                  title: Text(languages[idx]),
+                                                  value: checked.contains(
+                                                    languages[idx],
+                                                  ),
+                                                  title: Text(
+                                                    languages[idx],
+                                                  ),
                                                   onChanged: (bool? value) {
                                                     value!
                                                         ? checked
                                                             .add(languages[idx])
                                                         : checked.remove(
-                                                            languages[idx]);
-                                                    setStt(() {});
+                                                            languages[idx],
+                                                          );
+                                                    setStt(
+                                                      () {},
+                                                    );
                                                   },
                                                 );
-                                              }),
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            TextButton(
-                                              style: TextButton.styleFrom(
-                                                primary: Theme.of(context)
-                                                    .colorScheme
-                                                    .secondary,
-                                              ),
-                                              onPressed: () {
-                                                Navigator.pop(context);
                                               },
-                                              child: Text(
-                                                  AppLocalizations.of(context)!
-                                                      .cancel),
                                             ),
-                                            TextButton(
-                                              style: TextButton.styleFrom(
-                                                primary: Theme.of(context)
-                                                    .colorScheme
-                                                    .secondary,
-                                              ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  preferredLanguage = checked;
+                                          ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  primary: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary,
+                                                ),
+                                                onPressed: () {
                                                   Navigator.pop(context);
-                                                  Hive.box('settings').put(
-                                                      'preferredLanguage',
-                                                      checked);
-                                                  home_screen.fetched = false;
-                                                  home_screen
-                                                          .preferredLanguage =
-                                                      preferredLanguage;
-                                                  widget.callback!();
-                                                });
-                                                if (preferredLanguage.isEmpty) {
-                                                  ShowSnackBar().showSnackBar(
+                                                },
+                                                child: Text(
+                                                  AppLocalizations.of(
                                                     context,
-                                                    AppLocalizations.of(
-                                                            context)!
-                                                        .noLangSelected,
-                                                  );
-                                                }
-                                              },
-                                              child: Text(
-                                                AppLocalizations.of(context)!
-                                                    .ok,
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.w600),
+                                                  )!
+                                                      .cancel,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                });
-                              });
-                        },
-                      ),
-                      ListTile(
-                          title:
-                              Text(AppLocalizations.of(context)!.chartLocation),
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  primary: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary,
+                                                ),
+                                                onPressed: () {
+                                                  setState(
+                                                    () {
+                                                      preferredLanguage =
+                                                          checked;
+                                                      Navigator.pop(context);
+                                                      Hive.box('settings').put(
+                                                        'preferredLanguage',
+                                                        checked,
+                                                      );
+                                                      home_screen.fetched =
+                                                          false;
+                                                      home_screen
+                                                              .preferredLanguage =
+                                                          preferredLanguage;
+                                                      widget.callback!();
+                                                    },
+                                                  );
+                                                  if (preferredLanguage
+                                                      .isEmpty) {
+                                                    ShowSnackBar().showSnackBar(
+                                                      context,
+                                                      AppLocalizations.of(
+                                                        context,
+                                                      )!
+                                                          .noLangSelected,
+                                                    );
+                                                  }
+                                                },
+                                                child: Text(
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!
+                                                      .ok,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .chartLocation,
+                          ),
                           subtitle: Text(
-                              AppLocalizations.of(context)!.chartLocationSub),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .chartLocationSub,
+                          ),
                           trailing: SizedBox(
                             width: 150,
                             child: Text(
@@ -1222,216 +1807,239 @@ class _SettingPageState extends State<SettingPage> {
                             ),
                           ),
                           dense: true,
-                          onTap: () {
-                            showModalBottomSheet(
-                                isDismissible: true,
-                                backgroundColor: Colors.transparent,
-                                context: context,
-                                builder: (BuildContext context) {
-                                  final Map<String, String> codes =
-                                      CountryCodes().countryCodes;
-                                  final List<String> countries =
-                                      codes.keys.toList();
-                                  return BottomGradientContainer(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                    child: ListView.builder(
-                                        physics: const BouncingScrollPhysics(),
-                                        shrinkWrap: true,
-                                        padding: const EdgeInsets.fromLTRB(
-                                            0, 10, 0, 10),
-                                        itemCount: countries.length,
-                                        itemBuilder: (context, idx) {
-                                          return ListTileTheme(
-                                            selectedColor: Theme.of(context)
-                                                .colorScheme
-                                                .secondary,
-                                            child: ListTile(
-                                              contentPadding:
-                                                  const EdgeInsets.only(
-                                                      left: 25.0, right: 25.0),
-                                              title: Text(countries[idx]),
-                                              trailing: region == countries[idx]
-                                                  ? const Icon(
-                                                      Icons.check_rounded)
-                                                  : const SizedBox(),
-                                              selected:
-                                                  region == countries[idx],
-                                              onTap: () {
-                                                top_screen.items = [];
-                                                region = countries[idx];
-                                                top_screen.fetched = false;
-                                                Hive.box('settings')
-                                                    .put('region', region);
-
-                                                Navigator.pop(context);
-                                                widget.callback!();
-                                                setState(() {});
-                                              },
-                                            ),
-                                          );
-                                        }),
-                                  );
-                                });
-                          }),
-                      ListTile(
-                        title:
-                            Text(AppLocalizations.of(context)!.streamQuality),
-                        subtitle: Text(
-                            AppLocalizations.of(context)!.streamQualitySub),
-                        onTap: () {},
-                        trailing: DropdownButton(
-                          value: streamingQuality,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).textTheme.bodyText1!.color,
-                          ),
-                          underline: const SizedBox(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                streamingQuality = newValue;
-                                Hive.box('settings')
-                                    .put('streamingQuality', newValue);
-                              });
-                            }
-                          },
-                          items: <String>['96 kbps', '160 kbps', '320 kbps']
-                              .map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
+                          onTap: () async {
+                            region = await SpotifyCountry()
+                                .changeCountry(context: context);
+                            setState(
+                              () {},
                             );
-                          }).toList(),
+                          },
                         ),
-                        dense: true,
-                      ),
-                      BoxSwitchTile(
-                        title: Text(AppLocalizations.of(context)!.loadLast),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.loadLastSub),
-                        keyName: 'loadStart',
-                        defaultValue: true,
-                      ),
-                      BoxSwitchTile(
-                        title:
-                            Text(AppLocalizations.of(context)!.enforceRepeat),
-                        subtitle: Text(
-                            AppLocalizations.of(context)!.enforceRepeatSub),
-                        keyName: 'enforceRepeat',
-                        defaultValue: false,
-                      ),
-                      BoxSwitchTile(
-                        title: Text(AppLocalizations.of(context)!.autoplay),
-                        subtitle:
-                            Text(AppLocalizations.of(context)!.autoplaySub),
-                        keyName: 'autoplay',
-                        defaultValue: true,
-                      ),
-                      //   ListTile(
-                      //       title: const Text('BlackList Location'),
-                      //       subtitle: const Text(
-                      //           'Locations blacklisted from "My Music" section'),
-                      //       dense: true,
-                      //       onTap: () {
-                      //         final GlobalKey<AnimatedListState> _listKey =
-                      //             GlobalKey<AnimatedListState>();
-                      //         showModalBottomSheet(
-                      //             isDismissible: true,
-                      //             backgroundColor: Colors.transparent,
-                      //             context: context,
-                      //             builder: (BuildContext context) {
-                      //               return BottomGradientContainer(
-                      //                 borderRadius: BorderRadius.circular(20.0),
-                      //                 child: AnimatedList(
-                      //                   physics: const BouncingScrollPhysics(),
-                      //                   shrinkWrap: true,
-                      //                   padding: const EdgeInsets.fromLTRB(
-                      //                       0, 10, 0, 10),
-                      //                   key: _listKey,
-                      //                   initialItemCount: dirPaths.length + 1,
-                      //                   itemBuilder: (cntxt, idx, animation) {
-                      //                     return (idx == 0)
-                      //                         ? ListTile(
-                      //                             title:
-                      //                                 const Text('Add Location'),
-                      //                             leading: const Icon(
-                      //                                 CupertinoIcons.add),
-                      //                             onTap: () async {
-                      //                               final String temp =
-                      //                                   await Picker()
-                      //                                       .selectFolder(context,
-                      //                                           'Select Folder');
-                      //                               if (temp.trim() != '' &&
-                      //                                   !dirPaths
-                      //                                       .contains(temp)) {
-                      //                                 dirPaths.add(temp);
-                      //                                 Hive.box('settings').put(
-                      //                                     'blacklistedPaths',
-                      //                                     dirPaths);
-                      //                                 _listKey.currentState!
-                      //                                     .insertItem(
-                      //                                         dirPaths.length);
-                      //                               } else {
-                      //                                 if (temp.trim() == '') {
-                      //                                   Navigator.pop(context);
-                      //                                 }
-                      //                                 ShowSnackBar().showSnackBar(
-                      //                                   context,
-                      //                                   temp.trim() == ''
-                      //                                       ? 'No folder selected'
-                      //                                       : 'Already added',
-                      //                                 );
-                      //                               }
-                      //                             },
-                      //                           )
-                      //                         : SizeTransition(
-                      //                             sizeFactor: animation,
-                      //                             child: ListTile(
-                      //                               leading: const Icon(
-                      //                                   CupertinoIcons.folder),
-                      //                               title: Text(dirPaths[idx - 1]
-                      //                                   .toString()),
-                      //                               trailing: IconButton(
-                      //                                 icon: const Icon(
-                      //                                   CupertinoIcons.clear,
-                      //                                   size: 15.0,
-                      //                                 ),
-                      //                                 tooltip: 'Remove',
-                      //                                 onPressed: () {
-                      //                                   dirPaths
-                      //                                       .removeAt(idx - 1);
-                      //                                   Hive.box('settings').put(
-                      //                                       'blacklistedPaths',
-                      //                                       dirPaths);
-                      //                                   _listKey.currentState!
-                      //                                       .removeItem(
-                      //                                           idx,
-                      //                                           (context,
-                      //                                                   animation) =>
-                      //                                               Container());
-                      //                                 },
-                      //                               ),
-                      //                             ),
-                      //                           );
-                      //                   },
-                      //                 ),
-                      //               );
-                      //             });
-                      //       })
-                    ],
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .streamQuality,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .streamQualitySub,
+                          ),
+                          onTap: () {},
+                          trailing: DropdownButton(
+                            value: streamingQuality,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  Theme.of(context).textTheme.bodyText1!.color,
+                            ),
+                            underline: const SizedBox(),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(
+                                  () {
+                                    streamingQuality = newValue;
+                                    Hive.box('settings')
+                                        .put('streamingQuality', newValue);
+                                  },
+                                );
+                              }
+                            },
+                            items: <String>['96 kbps', '160 kbps', '320 kbps']
+                                .map<DropdownMenuItem<String>>((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            }).toList(),
+                          ),
+                          dense: true,
+                        ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .loadLast,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .loadLastSub,
+                          ),
+                          keyName: 'loadStart',
+                          defaultValue: true,
+                        ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .enforceRepeat,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .enforceRepeatSub,
+                          ),
+                          keyName: 'enforceRepeat',
+                          defaultValue: false,
+                        ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .autoplay,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .autoplaySub,
+                          ),
+                          keyName: 'autoplay',
+                          defaultValue: true,
+                        ),
+                        // BoxSwitchTile(
+                        //   title: Text(
+                        //     AppLocalizations.of(
+                        //       context,
+                        //     )!
+                        //         .cacheSong,
+                        //   ),
+                        //   subtitle: Text(
+                        //     AppLocalizations.of(
+                        //       context,
+                        //     )!
+                        //         .cacheSongSub,
+                        //   ),
+                        //   keyName: 'cacheSong',
+                        //   defaultValue: false,
+                        // ),
+                        //     ListTile(
+                        //         title: const Text('BlackList Location'),
+                        //         subtitle: const Text(
+                        //             'Locations blacklisted from "My Music" section'),
+                        //         dense: true,
+                        //         onTap: () {
+                        //           final GlobalKey<AnimatedListState> _listKey =
+                        //               GlobalKey<AnimatedListState>();
+                        //           showModalBottomSheet(
+                        //               isDismissible: true,
+                        //               backgroundColor: Colors.transparent,
+                        //               context: context,
+                        //               builder: (BuildContext context) {
+                        //                 return BottomGradientContainer(
+                        //                   borderRadius: BorderRadius.circular(20.0,),
+                        //                   child: AnimatedList(
+                        //                     physics: const BouncingScrollPhysics(),
+                        //                     shrinkWrap: true,
+                        //                     padding: const EdgeInsets.fromLTRB(
+                        //                         0, 10, 0, 10,),
+                        //                     key: _listKey,
+                        //                     initialItemCount: dirPaths.length + 1,
+                        //                     itemBuilder: (cntxt, idx, animation) {
+                        //                       return (idx == 0)
+                        //                           ? ListTile(
+                        //                               title:
+                        //                                   const Text('Add Location'),
+                        //                               leading: const Icon(
+                        //                                   CupertinoIcons.add,),
+                        //                               onTap: () async {
+                        //                                 final String temp =
+                        //                                     await Picker()
+                        //                                         .selectFolder(context,
+                        //                                             'Select Folder');
+                        //                                 if (temp.trim() != '' &&
+                        //                                     !dirPaths
+                        //                                         .contains(temp)) {
+                        //                                   dirPaths.add(temp);
+                        //                                   Hive.box('settings').put(
+                        //                                       'blacklistedPaths',
+                        //                                       dirPaths);
+                        //                                   _listKey.currentState!
+                        //                                       .insertItem(
+                        //                                           dirPaths.length);
+                        //                                 } else {
+                        //                                   if (temp.trim() == '') {
+                        //                                     Navigator.pop(context);
+                        //                                   }
+                        //                                   ShowSnackBar().showSnackBar(
+                        //                                     context,
+                        //                                     temp.trim() == ''
+                        //                                         ? 'No folder selected'
+                        //                                         : 'Already added',
+                        //                                   );
+                        //                                 }
+                        //                               },
+                        //                             )
+                        //                           : SizeTransition(
+                        //                               sizeFactor: animation,
+                        //                               child: ListTile(
+                        //                                 leading: const Icon(
+                        //                                     CupertinoIcons.folder,),
+                        //                                 title: Text(dirPaths[idx - 1]
+                        //                                     .toString(),),
+                        //                                 trailing: IconButton(
+                        //                                   icon: const Icon(
+                        //                                     CupertinoIcons.clear,
+                        //                                     size: 15.0,
+                        //                                   ),
+                        //                                   tooltip: 'Remove',
+                        //                                   onPressed: () {
+                        //                                     dirPaths
+                        //                                         .removeAt(idx - 1);
+                        //                                     Hive.box('settings').put(
+                        //                                         'blacklistedPaths',
+                        //                                         dirPaths);
+                        //                                     _listKey.currentState!
+                        //                                         .removeItem(
+                        //                                             idx,
+                        //                                             (context,
+                        //                                                     animation) =>
+                        //                                                 Container());
+                        //                                   },
+                        //                                 ),
+                        //                               ),
+                        //                             );
+                        //                     },
+                        //                   ),
+                        //                 );
+                        //               },);
+                        //         })
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
                           child: Text(
-                            AppLocalizations.of(context)!.down,
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .down,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -1440,10 +2048,18 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                         ),
                         ListTile(
-                          title:
-                              Text(AppLocalizations.of(context)!.downQuality),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downQuality,
+                          ),
                           subtitle: Text(
-                              AppLocalizations.of(context)!.downQualitySub),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downQualitySub,
+                          ),
                           onTap: () {},
                           trailing: DropdownButton(
                             value: downloadQuality,
@@ -1455,11 +2071,13 @@ class _SettingPageState extends State<SettingPage> {
                             underline: const SizedBox(),
                             onChanged: (String? newValue) {
                               if (newValue != null) {
-                                setState(() {
-                                  downloadQuality = newValue;
-                                  Hive.box('settings')
-                                      .put('downloadQuality', newValue);
-                                });
+                                setState(
+                                  () {
+                                    downloadQuality = newValue;
+                                    Hive.box('settings')
+                                        .put('downloadQuality', newValue);
+                                  },
+                                );
                               }
                             },
                             items: <String>['96 kbps', '160 kbps', '320 kbps']
@@ -1475,8 +2093,12 @@ class _SettingPageState extends State<SettingPage> {
                           dense: true,
                         ),
                         ListTile(
-                          title:
-                              Text(AppLocalizations.of(context)!.downLocation),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downLocation,
+                          ),
                           subtitle: Text(downloadPath),
                           trailing: TextButton(
                             style: TextButton.styleFrom(
@@ -1488,27 +2110,43 @@ class _SettingPageState extends State<SettingPage> {
                             onPressed: () async {
                               downloadPath =
                                   await ExtStorageProvider.getExtStorage(
-                                          dirName: 'Music') ??
+                                        dirName: 'Music',
+                                      ) ??
                                       '/storage/emulated/0/Music';
                               Hive.box('settings')
                                   .put('downloadPath', downloadPath);
-                              setState(() {});
+                              setState(
+                                () {},
+                              );
                             },
-                            child: Text(AppLocalizations.of(context)!.reset),
+                            child: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!
+                                  .reset,
+                            ),
                           ),
                           onTap: () async {
-                            final String temp = await Picker().selectFolder(
+                            final String temp = await Picker.selectFolder(
+                              context,
+                              AppLocalizations.of(
                                 context,
-                                AppLocalizations.of(context)!
-                                    .selectDownLocation);
+                              )!
+                                  .selectDownLocation,
+                            );
                             if (temp.trim() != '') {
                               downloadPath = temp;
                               Hive.box('settings').put('downloadPath', temp);
-                              setState(() {});
+                              setState(
+                                () {},
+                              );
                             } else {
                               ShowSnackBar().showSnackBar(
                                 context,
-                                AppLocalizations.of(context)!.noFolderSelected,
+                                AppLocalizations.of(
+                                  context,
+                                )!
+                                    .noFolderSelected,
                               );
                             }
                           },
@@ -1516,43 +2154,82 @@ class _SettingPageState extends State<SettingPage> {
                         ),
                         BoxSwitchTile(
                           title: Text(
-                              AppLocalizations.of(context)!.createAlbumFold),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createAlbumFold,
+                          ),
                           subtitle: Text(
-                              AppLocalizations.of(context)!.createAlbumFoldSub),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createAlbumFoldSub,
+                          ),
                           keyName: 'createDownloadFolder',
                           isThreeLine: true,
                           defaultValue: false,
                         ),
                         BoxSwitchTile(
-                          title:
-                              Text(AppLocalizations.of(context)!.createYtFold),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createYtFold,
+                          ),
                           subtitle: Text(
-                              AppLocalizations.of(context)!.createYtFoldSub),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createYtFoldSub,
+                          ),
                           keyName: 'createYoutubeFolder',
                           isThreeLine: true,
                           defaultValue: false,
                         ),
                         BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.downLyrics),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.downLyricsSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downLyrics,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downLyricsSub,
+                          ),
                           keyName: 'downloadLyrics',
                           defaultValue: false,
                           isThreeLine: true,
                         ),
-                      ]),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
                           child: Text(
-                            AppLocalizations.of(context)!.others,
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .others,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -1561,8 +2238,18 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                         ),
                         ListTile(
-                          title: Text(AppLocalizations.of(context)!.lang),
-                          subtitle: Text(AppLocalizations.of(context)!.langSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .lang,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .langSub,
+                          ),
                           onTap: () {},
                           trailing: DropdownButton(
                             value: lang,
@@ -1580,13 +2267,17 @@ class _SettingPageState extends State<SettingPage> {
                                 'Indonesia': 'id',
                               };
                               if (newValue != null) {
-                                setState(() {
-                                  lang = newValue;
-                                  MyApp.of(context).setLocale(
+                                setState(
+                                  () {
+                                    lang = newValue;
+                                    MyApp.of(context).setLocale(
                                       Locale.fromSubtags(
-                                          languageCode: codes[newValue]!));
-                                  Hive.box('settings').put('lang', newValue);
-                                });
+                                        languageCode: codes[newValue]!,
+                                      ),
+                                    );
+                                    Hive.box('settings').put('lang', newValue);
+                                  },
+                                );
                               }
                             },
                             items: <String>[
@@ -1607,59 +2298,106 @@ class _SettingPageState extends State<SettingPage> {
                         ),
 
                         ListTile(
-                            title:
-                                Text(AppLocalizations.of(context)!.minAudioLen),
-                            subtitle: Text(
-                                AppLocalizations.of(context)!.minAudioLenSub),
-                            dense: true,
-                            onTap: () {
-                              TextInputDialog().showTextInputDialog(
-                                  context: context,
-                                  title: AppLocalizations.of(context)!
-                                      .minAudioAlert,
-                                  initialText: (Hive.box('settings').get(
-                                          'minDuration',
-                                          defaultValue: 10) as int)
-                                      .toString(),
-                                  keyboardType: TextInputType.number,
-                                  onSubmitted: (String value) {
-                                    if (value.trim() == '') {
-                                      value = '0';
-                                    }
-                                    Hive.box('settings')
-                                        .put('minDuration', int.parse(value));
-                                    Navigator.pop(context);
-                                  });
-                            }),
-                        BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.liveSearch),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.liveSearchSub),
-                          keyName: 'liveSearch',
-                          isThreeLine: false,
-                          defaultValue: false,
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .minAudioLen,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .minAudioLenSub,
+                          ),
+                          dense: true,
+                          onTap: () {
+                            showTextInputDialog(
+                              context: context,
+                              title: AppLocalizations.of(
+                                context,
+                              )!
+                                  .minAudioAlert,
+                              initialText: (Hive.box('settings')
+                                          .get('minDuration', defaultValue: 10)
+                                      as int)
+                                  .toString(),
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (String value) {
+                                if (value.trim() == '') {
+                                  value = '0';
+                                }
+                                Hive.box('settings')
+                                    .put('minDuration', int.parse(value));
+                                Navigator.pop(context);
+                              },
+                            );
+                          },
                         ),
                         BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.useDown),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.useDownSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .liveSearch,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .liveSearchSub,
+                          ),
+                          keyName: 'liveSearch',
+                          isThreeLine: false,
+                          defaultValue: true,
+                        ),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDown,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDownSub,
+                          ),
                           keyName: 'useDown',
                           isThreeLine: true,
                           defaultValue: true,
                         ),
                         BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.supportEq),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.supportEqSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .supportEq,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .supportEqSub,
+                          ),
                           keyName: 'supportEq',
                           isThreeLine: true,
                           defaultValue: true,
                         ),
                         BoxSwitchTile(
-                          title:
-                              Text(AppLocalizations.of(context)!.stopOnClose),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .stopOnClose,
+                          ),
                           subtitle: Text(
-                              AppLocalizations.of(context)!.stopOnCloseSub),
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .stopOnCloseSub,
+                          ),
                           isThreeLine: true,
                           keyName: 'stopForegroundService',
                           defaultValue: true,
@@ -1682,23 +2420,43 @@ class _SettingPageState extends State<SettingPage> {
                         //   defaultValue: false,
                         // ),
                         BoxSwitchTile(
-                          title: Text(AppLocalizations.of(context)!.useProxy),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.useProxySub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useProxy,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useProxySub,
+                          ),
                           keyName: 'useProxy',
                           defaultValue: false,
                           isThreeLine: true,
                           onChanged: (bool val, Box box) {
                             useProxy = val;
-                            setState(() {});
+                            setState(
+                              () {},
+                            );
                           },
                         ),
                         Visibility(
                           visible: useProxy,
                           child: ListTile(
-                            title: Text(AppLocalizations.of(context)!.proxySet),
-                            subtitle:
-                                Text(AppLocalizations.of(context)!.proxySetSub),
+                            title: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!
+                                  .proxySet,
+                            ),
+                            subtitle: Text(
+                              AppLocalizations.of(
+                                context,
+                              )!
+                                  .proxySetSub,
+                            ),
                             dense: true,
                             trailing: Text(
                               '${Hive.box('settings').get("proxyIp")}:${Hive.box('settings').get("proxyPort")}',
@@ -1709,26 +2467,33 @@ class _SettingPageState extends State<SettingPage> {
                                 context: context,
                                 builder: (BuildContext context) {
                                   final _controller = TextEditingController(
-                                      text: settingsBox
-                                          .get('proxyIp')
-                                          .toString());
+                                    text: settingsBox.get('proxyIp').toString(),
+                                  );
                                   final _controller2 = TextEditingController(
-                                      text: settingsBox
-                                          .get('proxyPort')
-                                          .toString());
+                                    text:
+                                        settingsBox.get('proxyPort').toString(),
+                                  );
                                   return AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        10.0,
+                                      ),
+                                    ),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Row(
                                           children: [
                                             Text(
-                                              AppLocalizations.of(context)!
+                                              AppLocalizations.of(
+                                                context,
+                                              )!
                                                   .ipAdd,
                                               style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .secondary),
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .secondary,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1742,12 +2507,15 @@ class _SettingPageState extends State<SettingPage> {
                                         Row(
                                           children: [
                                             Text(
-                                              AppLocalizations.of(context)!
+                                              AppLocalizations.of(
+                                                context,
+                                              )!
                                                   .port,
                                               style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .secondary),
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .secondary,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1770,8 +2538,11 @@ class _SettingPageState extends State<SettingPage> {
                                           Navigator.pop(context);
                                         },
                                         child: Text(
-                                            AppLocalizations.of(context)!
-                                                .cancel),
+                                          AppLocalizations.of(
+                                            context,
+                                          )!
+                                              .cancel,
+                                        ),
                                       ),
                                       TextButton(
                                         style: TextButton.styleFrom(
@@ -1786,19 +2557,26 @@ class _SettingPageState extends State<SettingPage> {
                                               .secondary,
                                         ),
                                         onPressed: () {
-                                          settingsBox.put('proxyIp',
-                                              _controller.text.trim());
                                           settingsBox.put(
-                                              'proxyPort',
-                                              int.parse(
-                                                  _controller2.text.trim()));
+                                            'proxyIp',
+                                            _controller.text.trim(),
+                                          );
+                                          settingsBox.put(
+                                            'proxyPort',
+                                            int.parse(
+                                              _controller2.text.trim(),
+                                            ),
+                                          );
                                           Navigator.pop(context);
-                                          setState(() {});
+                                          setState(
+                                            () {},
+                                          );
                                         },
                                         child: Text(
-                                          AppLocalizations.of(context)!.ok,
-                                          style: const TextStyle(
-                                              color: Colors.white),
+                                          AppLocalizations.of(
+                                            context,
+                                          )!
+                                              .ok,
                                         ),
                                       ),
                                       const SizedBox(
@@ -1812,47 +2590,75 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                         ),
                         ListTile(
-                            title:
-                                Text(AppLocalizations.of(context)!.clearCache),
-                            subtitle: Text(
-                                AppLocalizations.of(context)!.clearCacheSub),
-                            trailing: SizedBox(
-                              height: 70.0,
-                              width: 70.0,
-                              child: Center(
-                                child: FutureBuilder(
-                                    future:
-                                        File(Hive.box('cache').path!).length(),
-                                    builder: (BuildContext context,
-                                        AsyncSnapshot<int> snapshot) {
-                                      if (snapshot.connectionState ==
-                                          ConnectionState.done) {
-                                        return Text(
-                                            '${((snapshot.data ?? 0) / (1024 * 1024)).toStringAsFixed(2)} MB');
-                                      }
-                                      return const Text('');
-                                    }),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .clearCache,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .clearCacheSub,
+                          ),
+                          trailing: SizedBox(
+                            height: 70.0,
+                            width: 70.0,
+                            child: Center(
+                              child: FutureBuilder(
+                                future: File(Hive.box('cache').path!).length(),
+                                builder: (
+                                  BuildContext context,
+                                  AsyncSnapshot<int> snapshot,
+                                ) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.done) {
+                                    return Text(
+                                      '${((snapshot.data ?? 0) / (1024 * 1024)).toStringAsFixed(2)} MB',
+                                    );
+                                  }
+                                  return const Text('');
+                                },
                               ),
                             ),
-                            dense: true,
-                            isThreeLine: true,
-                            onTap: () async {
-                              Hive.box('cache').clear();
-                              setState(() {});
-                            }),
-                      ]),
+                          ),
+                          dense: true,
+                          isThreeLine: true,
+                          onTap: () async {
+                            Hive.box('cache').clear();
+                            setState(
+                              () {},
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
-                child: GradientCard(
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10.0,
+                    10.0,
+                    10.0,
+                    10.0,
+                  ),
+                  child: GradientCard(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(15, 15, 15, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                            15,
+                            15,
+                            15,
+                            0,
+                          ),
                           child: Text(
-                            AppLocalizations.of(context)!.backNRest,
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .backNRest,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -1861,103 +2667,160 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                         ),
                         ListTile(
-                          title: Text(AppLocalizations.of(context)!.createBack),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.createBackSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createBack,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .createBackSub,
+                          ),
                           dense: true,
                           onTap: () {
                             showModalBottomSheet(
-                                isDismissible: true,
-                                backgroundColor: Colors.transparent,
-                                context: context,
-                                builder: (BuildContext context) {
-                                  final List playlistNames =
-                                      Hive.box('settings').get('playlistNames',
-                                              defaultValue: ['Favorite Songs'])
-                                          as List;
-                                  if (!playlistNames
-                                      .contains('Favorite Songs')) {
-                                    playlistNames.insert(0, 'Favorite Songs');
-                                    settingsBox.put(
-                                        'playlistNames', playlistNames);
-                                  }
+                              isDismissible: true,
+                              backgroundColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                final List playlistNames =
+                                    Hive.box('settings').get(
+                                  'playlistNames',
+                                  defaultValue: ['Favorite Songs'],
+                                ) as List;
+                                if (!playlistNames.contains('Favorite Songs')) {
+                                  playlistNames.insert(0, 'Favorite Songs');
+                                  settingsBox.put(
+                                    'playlistNames',
+                                    playlistNames,
+                                  );
+                                }
 
-                                  final List<String> persist = [
-                                    AppLocalizations.of(context)!.settings,
-                                    AppLocalizations.of(context)!.playlists,
-                                  ];
+                                final List<String> persist = [
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .settings,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .playlists,
+                                ];
 
-                                  final List<String> checked = [
-                                    AppLocalizations.of(context)!.settings,
-                                    AppLocalizations.of(context)!.downs,
-                                    AppLocalizations.of(context)!.playlists,
-                                  ];
+                                final List<String> checked = [
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .settings,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .downs,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .playlists,
+                                ];
 
-                                  final List<String> items = [
-                                    AppLocalizations.of(context)!.settings,
-                                    AppLocalizations.of(context)!.playlists,
-                                    AppLocalizations.of(context)!.downs,
-                                    AppLocalizations.of(context)!.cache,
-                                  ];
+                                final List<String> items = [
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .settings,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .playlists,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .downs,
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cache,
+                                ];
 
-                                  final Map<String, List> boxNames = {
-                                    AppLocalizations.of(context)!.settings: [
-                                      'settings'
-                                    ],
-                                    AppLocalizations.of(context)!.cache: [
-                                      'cache'
-                                    ],
-                                    AppLocalizations.of(context)!.downs: [
-                                      'downloads'
-                                    ],
-                                    AppLocalizations.of(context)!.playlists:
-                                        playlistNames,
-                                  };
-                                  return StatefulBuilder(builder:
-                                      (BuildContext context,
-                                          StateSetter setStt) {
+                                final Map<String, List> boxNames = {
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .settings: ['settings'],
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .cache: ['cache'],
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .downs: ['downloads'],
+                                  AppLocalizations.of(
+                                    context,
+                                  )!
+                                      .playlists: playlistNames,
+                                };
+                                return StatefulBuilder(
+                                  builder: (
+                                    BuildContext context,
+                                    StateSetter setStt,
+                                  ) {
                                     return BottomGradientContainer(
-                                      borderRadius: BorderRadius.circular(20.0),
+                                      borderRadius: BorderRadius.circular(
+                                        20.0,
+                                      ),
                                       child: Column(
                                         children: [
                                           Expanded(
                                             child: ListView.builder(
-                                                physics:
-                                                    const BouncingScrollPhysics(),
-                                                shrinkWrap: true,
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                        0, 10, 0, 10),
-                                                itemCount: items.length,
-                                                itemBuilder: (context, idx) {
-                                                  return CheckboxListTile(
-                                                    activeColor:
-                                                        Theme.of(context)
-                                                            .colorScheme
-                                                            .secondary,
-                                                    checkColor: Theme.of(
-                                                                    context)
-                                                                .colorScheme
-                                                                .secondary ==
-                                                            Colors.white
-                                                        ? Colors.black
-                                                        : null,
-                                                    value: checked
-                                                        .contains(items[idx]),
-                                                    title: Text(items[idx]),
-                                                    onChanged: persist.contains(
-                                                            items[idx])
-                                                        ? null
-                                                        : (bool? value) {
-                                                            value!
-                                                                ? checked.add(
-                                                                    items[idx])
-                                                                : checked.remove(
-                                                                    items[idx]);
-                                                            setStt(() {});
-                                                          },
-                                                  );
-                                                }),
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              shrinkWrap: true,
+                                              padding:
+                                                  const EdgeInsets.fromLTRB(
+                                                0,
+                                                10,
+                                                0,
+                                                10,
+                                              ),
+                                              itemCount: items.length,
+                                              itemBuilder: (context, idx) {
+                                                return CheckboxListTile(
+                                                  activeColor: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary,
+                                                  checkColor: Theme.of(context)
+                                                              .colorScheme
+                                                              .secondary ==
+                                                          Colors.white
+                                                      ? Colors.black
+                                                      : null,
+                                                  value: checked.contains(
+                                                    items[idx],
+                                                  ),
+                                                  title: Text(
+                                                    items[idx],
+                                                  ),
+                                                  onChanged: persist
+                                                          .contains(items[idx])
+                                                      ? null
+                                                      : (bool? value) {
+                                                          value!
+                                                              ? checked.add(
+                                                                  items[idx],
+                                                                )
+                                                              : checked.remove(
+                                                                  items[idx],
+                                                                );
+                                                          setStt(
+                                                            () {},
+                                                          );
+                                                        },
+                                                );
+                                              },
+                                            ),
                                           ),
                                           Row(
                                             mainAxisAlignment:
@@ -1972,9 +2835,12 @@ class _SettingPageState extends State<SettingPage> {
                                                 onPressed: () {
                                                   Navigator.pop(context);
                                                 },
-                                                child: Text(AppLocalizations.of(
-                                                        context)!
-                                                    .cancel),
+                                                child: Text(
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!
+                                                      .cancel,
+                                                ),
                                               ),
                                               TextButton(
                                                 style: TextButton.styleFrom(
@@ -1983,24 +2849,21 @@ class _SettingPageState extends State<SettingPage> {
                                                       .secondary,
                                                 ),
                                                 onPressed: () {
-                                                  BackupNRestore().createBackup(
-                                                      context,
-                                                      checked,
-                                                      boxNames);
+                                                  createBackup(
+                                                    context,
+                                                    checked,
+                                                    boxNames,
+                                                  );
                                                   Navigator.pop(context);
                                                 },
                                                 child: Text(
-                                                  AppLocalizations.of(context)!
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!
                                                       .ok,
-                                                  style: TextStyle(
-                                                      color: Theme.of(context)
-                                                                  .colorScheme
-                                                                  .secondary ==
-                                                              Colors.white
-                                                          ? Colors.black
-                                                          : null,
-                                                      fontWeight:
-                                                          FontWeight.w600),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -2008,27 +2871,50 @@ class _SettingPageState extends State<SettingPage> {
                                         ],
                                       ),
                                     );
-                                  });
-                                });
+                                  },
+                                );
+                              },
+                            );
                           },
                         ),
                         ListTile(
-                          title: Text(AppLocalizations.of(context)!.restore),
-                          subtitle:
-                              Text(AppLocalizations.of(context)!.restoreSub),
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .restore,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .restoreSub,
+                          ),
                           dense: true,
-                          onTap: () {
-                            BackupNRestore().restore(context);
+                          onTap: () async {
+                            await restore(context);
+                            currentTheme.refresh();
                           },
                         ),
-                        // BoxSwitchTile(
-                        //   title: Text(AppLocalizations.of(context)!.autoBack),
-                        //   subtitle:
-                        //       Text(AppLocalizations.of(context)!.autoBackSub),
-                        //   keyName: 'autoBackup',
-                        //   defaultValue: false,
-                        // ),
-                      ]),
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .autoBack,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .autoBackSub,
+                          ),
+                          keyName: 'autoBackup',
+                          defaultValue: false,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // Padding(
@@ -2310,8 +3196,8 @@ class _SettingPageState extends State<SettingPage> {
               // ),
             ],
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -2319,9 +3205,11 @@ class _SettingPageState extends State<SettingPage> {
     const custom = 'Custom';
     if (theme != custom) {
       currentTheme.setInitialTheme(custom);
-      setState(() {
-        theme = custom;
-      });
+      setState(
+        () {
+          theme = custom;
+        },
+      );
     }
   }
 }
@@ -2347,22 +3235,80 @@ class BoxSwitchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-        valueListenable: Hive.box('settings').listenable(),
-        builder: (BuildContext context, Box box, Widget? widget) {
-          return SwitchListTile(
-              activeColor: Theme.of(context).colorScheme.secondary,
-              title: title,
-              subtitle: subtitle,
-              isThreeLine: isThreeLine ?? false,
-              dense: true,
-              value: box.get(keyName, defaultValue: defaultValue) as bool? ??
-                  defaultValue,
-              onChanged: (val) {
-                box.put(keyName, val);
-                if (onChanged != null) {
-                  onChanged!(val, box);
-                }
-              });
-        });
+      valueListenable: Hive.box('settings').listenable(),
+      builder: (BuildContext context, Box box, Widget? widget) {
+        return SwitchListTile(
+          activeColor: Theme.of(context).colorScheme.secondary,
+          title: title,
+          subtitle: subtitle,
+          isThreeLine: isThreeLine ?? false,
+          dense: true,
+          value: box.get(keyName, defaultValue: defaultValue) as bool? ??
+              defaultValue,
+          onChanged: (val) {
+            box.put(keyName, val);
+            onChanged?.call(val, box);
+          },
+        );
+      },
+    );
+  }
+}
+
+class SpotifyCountry {
+  Future<String> changeCountry({required BuildContext context}) async {
+    String region =
+        Hive.box('settings').get('region', defaultValue: 'India') as String;
+    await showModalBottomSheet(
+      isDismissible: true,
+      backgroundColor: Colors.transparent,
+      context: context,
+      builder: (BuildContext context) {
+        const Map<String, String> codes = CountryCodes.countryCodes;
+        final List<String> countries = codes.keys.toList();
+        return BottomGradientContainer(
+          borderRadius: BorderRadius.circular(
+            20.0,
+          ),
+          child: ListView.builder(
+            physics: const BouncingScrollPhysics(),
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(
+              0,
+              10,
+              0,
+              10,
+            ),
+            itemCount: countries.length,
+            itemBuilder: (context, idx) {
+              return ListTileTheme(
+                selectedColor: Theme.of(context).colorScheme.secondary,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.only(
+                    left: 25.0,
+                    right: 25.0,
+                  ),
+                  title: Text(
+                    countries[idx],
+                  ),
+                  trailing: region == countries[idx]
+                      ? const Icon(Icons.check_rounded)
+                      : const SizedBox(),
+                  selected: region == countries[idx],
+                  onTap: () {
+                    top_screen.items = [];
+                    region = countries[idx];
+                    top_screen.fetched = false;
+                    Hive.box('settings').put('region', region);
+                    Navigator.pop(context);
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+    return region;
   }
 }

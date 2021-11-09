@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:blackhole/CustomWidgets/custom_physics.dart';
@@ -5,7 +6,7 @@ import 'package:blackhole/CustomWidgets/gradient_containers.dart';
 import 'package:blackhole/CustomWidgets/miniplayer.dart';
 import 'package:blackhole/CustomWidgets/snackbar.dart';
 import 'package:blackhole/CustomWidgets/textinput_dialog.dart';
-import 'package:blackhole/Helpers/countrycodes.dart';
+import 'package:blackhole/Helpers/backup_restore.dart';
 import 'package:blackhole/Helpers/supabase.dart';
 import 'package:blackhole/Screens/Home/saavn.dart';
 import 'package:blackhole/Screens/Library/library.dart';
@@ -13,6 +14,7 @@ import 'package:blackhole/Screens/Search/search.dart';
 import 'package:blackhole/Screens/Settings/setting.dart';
 import 'package:blackhole/Screens/Top Charts/top.dart';
 import 'package:blackhole/Screens/YouTube/youtube_home.dart';
+import 'package:blackhole/Services/ext_storage_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
@@ -37,6 +39,8 @@ class _HomePageState extends State<HomePage> {
       Hive.box('settings').get('name', defaultValue: 'Guest') as String;
   bool checkUpdate =
       Hive.box('settings').get('checkUpdate', defaultValue: false) as bool;
+  bool autoBackup =
+      Hive.box('settings').get('autoBackup', defaultValue: false) as bool;
   DateTime? backButtonPressTime;
 
   String capitalize(String msg) {
@@ -114,7 +118,9 @@ class _HomePageState extends State<HomePage> {
           now.timeZoneOffset.toString().replaceAll('.000000', '');
 
       updateUserDetails(
-          'timeZone', 'Zone: ${now.timeZoneName}, Offset: $offset');
+        'timeZone',
+        'Zone: ${now.timeZoneName}, Offset: $offset',
+      );
 
       PackageInfo.fromPlatform().then((PackageInfo packageInfo) {
         appVersion = packageInfo.version;
@@ -137,6 +143,55 @@ class _HomePageState extends State<HomePage> {
                 ),
               );
             }
+          });
+        }
+        if (autoBackup) {
+          final List<String> checked = [
+            AppLocalizations.of(
+              context,
+            )!
+                .settings,
+            AppLocalizations.of(
+              context,
+            )!
+                .downs,
+            AppLocalizations.of(
+              context,
+            )!
+                .playlists,
+          ];
+          final List playlistNames = Hive.box('settings').get(
+            'playlistNames',
+            defaultValue: ['Favorite Songs'],
+          ) as List;
+          final Map<String, List> boxNames = {
+            AppLocalizations.of(
+              context,
+            )!
+                .settings: ['settings'],
+            AppLocalizations.of(
+              context,
+            )!
+                .cache: ['cache'],
+            AppLocalizations.of(
+              context,
+            )!
+                .downs: ['downloads'],
+            AppLocalizations.of(
+              context,
+            )!
+                .playlists: playlistNames,
+          };
+          ExtStorageProvider.getExtStorage(dirName: 'BlackHole/Backups')
+              .then((value) {
+            createBackup(
+              context,
+              checked,
+              boxNames,
+              path: value,
+              fileName: 'BlackHole_AutoBackup',
+              showDialog: false,
+            );
           });
         }
       });
@@ -220,15 +275,18 @@ class _HomePageState extends State<HomePage> {
                                 Colors.black.withOpacity(0.1),
                               ],
                             ).createShader(
-                                Rect.fromLTRB(0, 0, rect.width, rect.height));
+                              Rect.fromLTRB(0, 0, rect.width, rect.height),
+                            );
                           },
                           blendMode: BlendMode.dstIn,
                           child: Image(
-                              alignment: Alignment.topCenter,
-                              image: AssetImage(Theme.of(context).brightness ==
-                                      Brightness.dark
+                            alignment: Alignment.topCenter,
+                            image: AssetImage(
+                              Theme.of(context).brightness == Brightness.dark
                                   ? 'assets/header-dark.jpg'
-                                  : 'assets/header.jpg')),
+                                  : 'assets/header.jpg',
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -253,19 +311,21 @@ class _HomePageState extends State<HomePage> {
                               Navigator.pop(context);
                             },
                           ),
-                          ListTile(
-                            title: Text(AppLocalizations.of(context)!.myMusic),
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 20.0),
-                            leading: Icon(
-                              MdiIcons.folderMusic,
-                              color: Theme.of(context).iconTheme.color,
+                          if (Platform.isAndroid)
+                            ListTile(
+                              title:
+                                  Text(AppLocalizations.of(context)!.myMusic),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 20.0),
+                              leading: Icon(
+                                MdiIcons.folderMusic,
+                                color: Theme.of(context).iconTheme.color,
+                              ),
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.pushNamed(context, '/mymusic');
+                              },
                             ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/mymusic');
-                            },
-                          ),
                           ListTile(
                             title: Text(AppLocalizations.of(context)!.downs),
                             contentPadding:
@@ -305,10 +365,12 @@ class _HomePageState extends State<HomePage> {
                             onTap: () {
                               Navigator.pop(context);
                               Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          SettingPage(callback: callback)));
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SettingPage(callback: callback),
+                                ),
+                              );
                             },
                           ),
                           // ListTile(
@@ -374,27 +436,32 @@ class _HomePageState extends State<HomePage> {
                                   // floating: true,
                                   automaticallyImplyLeading: false,
                                   flexibleSpace: LayoutBuilder(
-                                    builder: (BuildContext context,
-                                        BoxConstraints constraints) {
+                                    builder: (
+                                      BuildContext context,
+                                      BoxConstraints constraints,
+                                    ) {
                                       return FlexibleSpaceBar(
                                         // collapseMode: CollapseMode.parallax,
                                         background: GestureDetector(
                                           onTap: () async {
-                                            await TextInputDialog()
-                                                .showTextInputDialog(
-                                                    context: context,
-                                                    title: 'Name',
-                                                    initialText: name,
-                                                    keyboardType:
-                                                        TextInputType.name,
-                                                    onSubmitted: (value) {
-                                                      Hive.box('settings').put(
-                                                          'name', value.trim());
-                                                      name = value.trim();
-                                                      Navigator.pop(context);
-                                                      updateUserDetails(
-                                                          'name', value.trim());
-                                                    });
+                                            await showTextInputDialog(
+                                              context: context,
+                                              title: 'Name',
+                                              initialText: name,
+                                              keyboardType: TextInputType.name,
+                                              onSubmitted: (value) {
+                                                Hive.box('settings').put(
+                                                  'name',
+                                                  value.trim(),
+                                                );
+                                                name = value.trim();
+                                                Navigator.pop(context);
+                                                updateUserDetails(
+                                                  'name',
+                                                  value.trim(),
+                                                );
+                                              },
+                                            );
                                             setState(() {});
                                           },
                                           child: Column(
@@ -408,59 +475,69 @@ class _HomePageState extends State<HomePage> {
                                                   Padding(
                                                     padding:
                                                         const EdgeInsets.only(
-                                                            left: 15.0),
+                                                      left: 15.0,
+                                                    ),
                                                     child: Text(
                                                       AppLocalizations.of(
-                                                              context)!
+                                                        context,
+                                                      )!
                                                           .homeGreet,
                                                       style: TextStyle(
-                                                          letterSpacing: 2,
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .secondary,
-                                                          fontSize: 30,
-                                                          fontWeight:
-                                                              FontWeight.bold),
+                                                        letterSpacing: 2,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .secondary,
+                                                        fontSize: 30,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                               Padding(
                                                 padding: const EdgeInsets.only(
-                                                    left: 15.0),
+                                                  left: 15.0,
+                                                ),
                                                 child: Row(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.end,
                                                   children: [
                                                     ValueListenableBuilder(
-                                                        valueListenable:
-                                                            Hive.box('settings')
-                                                                .listenable(),
-                                                        builder: (BuildContext
-                                                                context,
-                                                            Box box,
-                                                            widget) {
-                                                          return Text(
-                                                            (box.get('name') ==
-                                                                        null ||
-                                                                    box.get('name') ==
-                                                                        '')
-                                                                ? 'Guest'
-                                                                : capitalize(box
-                                                                    .get('name')
-                                                                    .split(
-                                                                        ' ')[0]
-                                                                    .toString()),
-                                                            style: const TextStyle(
-                                                                letterSpacing:
-                                                                    2,
-                                                                fontSize: 20,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500),
-                                                          );
-                                                        }),
+                                                      valueListenable:
+                                                          Hive.box('settings')
+                                                              .listenable(),
+                                                      builder: (
+                                                        BuildContext context,
+                                                        Box box,
+                                                        Widget? child,
+                                                      ) {
+                                                        return Text(
+                                                          (box.get('name') ==
+                                                                      null ||
+                                                                  box.get('name') ==
+                                                                      '')
+                                                              ? 'Guest'
+                                                              : capitalize(
+                                                                  box
+                                                                      .get(
+                                                                        'name',
+                                                                      )
+                                                                      .split(
+                                                                        ' ',
+                                                                      )[0]
+                                                                      .toString(),
+                                                                ),
+                                                          style:
+                                                              const TextStyle(
+                                                            letterSpacing: 2,
+                                                            fontSize: 20,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -481,52 +558,53 @@ class _HomePageState extends State<HomePage> {
                                   title: Align(
                                     alignment: Alignment.centerRight,
                                     child: AnimatedBuilder(
-                                        animation: _scrollController,
-                                        builder: (context, child) {
-                                          return GestureDetector(
-                                            child: AnimatedContainer(
-                                              width: (!_scrollController
-                                                          .hasClients ||
-                                                      _scrollController
-                                                              // ignore: invalid_use_of_protected_member
-                                                              .positions
-                                                              .length >
-                                                          1)
-                                                  ? MediaQuery.of(context)
-                                                      .size
-                                                      .width
-                                                  : max(
-                                                      MediaQuery.of(context)
-                                                              .size
-                                                              .width -
-                                                          _scrollController
-                                                              .offset
-                                                              .roundToDouble(),
-                                                      MediaQuery.of(context)
-                                                              .size
-                                                              .width -
-                                                          75),
-                                              height: 52.0,
-                                              duration: const Duration(
-                                                  milliseconds: 150),
-                                              padding:
-                                                  const EdgeInsets.all(2.0),
-                                              // margin: EdgeInsets.zero,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(10.0),
-                                                color:
-                                                    Theme.of(context).cardColor,
-                                                boxShadow: const [
-                                                  BoxShadow(
-                                                    color: Colors.black26,
-                                                    blurRadius: 5.0,
-                                                    offset: Offset(1.5, 1.5),
-                                                    // shadow direction: bottom right
-                                                  )
-                                                ],
-                                              ),
-                                              child: Row(children: [
+                                      animation: _scrollController,
+                                      builder: (context, child) {
+                                        return GestureDetector(
+                                          child: AnimatedContainer(
+                                            width: (!_scrollController
+                                                        .hasClients ||
+                                                    _scrollController
+                                                            // ignore: invalid_use_of_protected_member
+                                                            .positions
+                                                            .length >
+                                                        1)
+                                                ? MediaQuery.of(context)
+                                                    .size
+                                                    .width
+                                                : max(
+                                                    MediaQuery.of(context)
+                                                            .size
+                                                            .width -
+                                                        _scrollController.offset
+                                                            .roundToDouble(),
+                                                    MediaQuery.of(context)
+                                                            .size
+                                                            .width -
+                                                        75,
+                                                  ),
+                                            height: 52.0,
+                                            duration: const Duration(
+                                              milliseconds: 150,
+                                            ),
+                                            padding: const EdgeInsets.all(2.0),
+                                            // margin: EdgeInsets.zero,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(10.0),
+                                              color:
+                                                  Theme.of(context).cardColor,
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 5.0,
+                                                  offset: Offset(1.5, 1.5),
+                                                  // shadow direction: bottom right
+                                                )
+                                              ],
+                                            ),
+                                            child: Row(
+                                              children: [
                                                 const SizedBox(width: 10.0),
                                                 Icon(
                                                   CupertinoIcons.search,
@@ -536,7 +614,9 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                                 const SizedBox(width: 10.0),
                                                 Text(
-                                                  AppLocalizations.of(context)!
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  )!
                                                       .searchText,
                                                   style: TextStyle(
                                                     fontSize: 16.0,
@@ -548,18 +628,22 @@ class _HomePageState extends State<HomePage> {
                                                         FontWeight.normal,
                                                   ),
                                                 ),
-                                              ]),
+                                              ],
                                             ),
-                                            onTap: () => Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const SearchPage(
-                                                          query: '',
-                                                          fromHome: true,
-                                                        ))),
-                                          );
-                                        }),
+                                          ),
+                                          onTap: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const SearchPage(
+                                                query: '',
+                                                fromHome: true,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ];
@@ -574,7 +658,8 @@ class _HomePageState extends State<HomePage> {
                                 angle: 22 / 7 * 2,
                                 child: IconButton(
                                   icon: const Icon(
-                                      Icons.horizontal_split_rounded),
+                                    Icons.horizontal_split_rounded,
+                                  ),
                                   // color: Theme.of(context).iconTheme.color,
                                   onPressed: () {
                                     Scaffold.of(context).openDrawer();
@@ -589,10 +674,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                       TopCharts(
                         pageController: pageController,
-                        region: CountryCodes()
-                            .countryCodes[Hive.box('settings')
-                                .get('region', defaultValue: 'India')]
-                            .toString(),
                       ),
                       const YouTube(),
                       LibraryPage(),
@@ -606,44 +687,44 @@ class _HomePageState extends State<HomePage> {
         ),
         bottomNavigationBar: SafeArea(
           child: ValueListenableBuilder(
-              valueListenable: _selectedIndex,
-              builder: (BuildContext context, int indexValue, Widget? child) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 100),
-                  height: 60,
-                  child: SalomonBottomBar(
-                    currentIndex: indexValue,
-                    onTap: (index) {
-                      _onItemTapped(index);
-                    },
-                    items: [
-                      /// Home
-                      SalomonBottomBarItem(
-                        icon: const Icon(Icons.home_rounded),
-                        title: Text(AppLocalizations.of(context)!.home),
-                        selectedColor: Theme.of(context).colorScheme.secondary,
-                      ),
+            valueListenable: _selectedIndex,
+            builder: (BuildContext context, int indexValue, Widget? child) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                height: 60,
+                child: SalomonBottomBar(
+                  currentIndex: indexValue,
+                  onTap: (index) {
+                    _onItemTapped(index);
+                  },
+                  items: [
+                    /// Home
+                    SalomonBottomBarItem(
+                      icon: const Icon(Icons.home_rounded),
+                      title: Text(AppLocalizations.of(context)!.home),
+                      selectedColor: Theme.of(context).colorScheme.secondary,
+                    ),
 
-                      SalomonBottomBarItem(
-                        icon: const Icon(Icons.trending_up_rounded),
-                        title:
-                            Text(AppLocalizations.of(context)!.spotifyCharts),
-                        selectedColor: Theme.of(context).colorScheme.secondary,
-                      ),
-                      SalomonBottomBarItem(
-                        icon: const Icon(MdiIcons.youtube),
-                        title: Text(AppLocalizations.of(context)!.youTube),
-                        selectedColor: Theme.of(context).colorScheme.secondary,
-                      ),
-                      SalomonBottomBarItem(
-                        icon: const Icon(Icons.my_library_music_rounded),
-                        title: Text(AppLocalizations.of(context)!.library),
-                        selectedColor: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                    SalomonBottomBarItem(
+                      icon: const Icon(Icons.trending_up_rounded),
+                      title: Text(AppLocalizations.of(context)!.spotifyCharts),
+                      selectedColor: Theme.of(context).colorScheme.secondary,
+                    ),
+                    SalomonBottomBarItem(
+                      icon: const Icon(MdiIcons.youtube),
+                      title: Text(AppLocalizations.of(context)!.youTube),
+                      selectedColor: Theme.of(context).colorScheme.secondary,
+                    ),
+                    SalomonBottomBarItem(
+                      icon: const Icon(Icons.my_library_music_rounded),
+                      title: Text(AppLocalizations.of(context)!.library),
+                      selectedColor: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

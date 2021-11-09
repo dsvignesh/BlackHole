@@ -10,8 +10,9 @@ import 'package:on_audio_query/on_audio_query.dart';
 
 class DataSearch extends SearchDelegate {
   final List<SongModel> data;
+  final String tempPath;
 
-  DataSearch(this.data);
+  DataSearch({required this.data, required this.tempPath}) : super();
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -53,13 +54,18 @@ class DataSearch extends SearchDelegate {
         : [
             ...{
               ...data
-                  .where((element) =>
-                      element.title.toLowerCase().contains(query.toLowerCase()))
+                  .where(
+                    (element) => element.title
+                        .toLowerCase()
+                        .contains(query.toLowerCase()),
+                  )
                   .toList(),
               ...data
-                  .where((element) => element.artist!
-                      .toLowerCase()
-                      .contains(query.toLowerCase()))
+                  .where(
+                    (element) => element.artist!
+                        .toLowerCase()
+                        .contains(query.toLowerCase()),
+                  )
                   .toList(),
             }
           ];
@@ -70,27 +76,11 @@ class DataSearch extends SearchDelegate {
       itemExtent: 70.0,
       itemCount: suggestionList.length,
       itemBuilder: (context, index) => ListTile(
-        leading: Card(
-          elevation: 5,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(7.0),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: QueryArtworkWidget(
-            id: suggestionList[index].id,
-            type: ArtworkType.AUDIO,
-            artworkBorder: BorderRadius.circular(7.0),
-            keepOldArtwork: true,
-            nullArtworkWidget: ClipRRect(
-              borderRadius: BorderRadius.circular(7.0),
-              child: const Image(
-                fit: BoxFit.cover,
-                height: 50.0,
-                width: 50.0,
-                image: AssetImage('assets/cover.jpg'),
-              ),
-            ),
-          ),
+        leading: OfflineAudioQuery.offlineArtworkWidget(
+          id: suggestionList[index].id,
+          type: ArtworkType.AUDIO,
+          tempPath: tempPath,
+          fileName: suggestionList[index].displayNameWOExt,
         ),
         title: Text(
           suggestionList[index].title.trim() != ''
@@ -105,14 +95,16 @@ class DataSearch extends SearchDelegate {
           overflow: TextOverflow.ellipsis,
         ),
         onTap: () async {
-          final singleSongMap =
-              await OfflineAudioQuery().getArtwork([suggestionList[index]]);
           Navigator.of(context).push(
             PageRouteBuilder(
               opaque: false,
               pageBuilder: (_, __, ___) => PlayScreen(
-                data: {'response': singleSongMap, 'index': 0, 'offline': true},
+                songsList: suggestionList,
+                index: index,
+                offline: true,
                 fromMiniplayer: false,
+                fromDownloads: false,
+                recommend: false,
               ),
             ),
           );
@@ -192,16 +184,20 @@ class DownloadsSearch extends SearchDelegate {
         : [
             ...{
               ...data
-                  .where((element) => element['title']
-                      .toString()
-                      .toLowerCase()
-                      .contains(query.toLowerCase()))
+                  .where(
+                    (element) => element['title']
+                        .toString()
+                        .toLowerCase()
+                        .contains(query.toLowerCase()),
+                  )
                   .toList(),
               ...data
-                  .where((element) => element['artist']
-                      .toString()
-                      .toLowerCase()
-                      .contains(query.toLowerCase()))
+                  .where(
+                    (element) => element['artist']
+                        .toString()
+                        .toLowerCase()
+                        .contains(query.toLowerCase()),
+                  )
                   .toList(),
             }
           ];
@@ -225,19 +221,22 @@ class DownloadsSearch extends SearchDelegate {
                 ? Image(
                     fit: BoxFit.cover,
                     image: FileImage(
-                        File(suggestionList[index]['image'].toString())),
+                      File(suggestionList[index]['image'].toString()),
+                    ),
                     errorBuilder: (_, __, ___) =>
                         Image.asset('assets/cover.jpg'),
                   )
                 : CachedNetworkImage(
                     fit: BoxFit.cover,
                     errorWidget: (context, _, __) => const Image(
+                      fit: BoxFit.cover,
                       image: AssetImage('assets/cover.jpg'),
                     ),
                     imageUrl: suggestionList[index]['image']
                         .toString()
                         .replaceAll('http:', 'https:'),
                     placeholder: (context, url) => const Image(
+                      fit: BoxFit.cover,
                       image: AssetImage('assets/cover.jpg'),
                     ),
                   ),
@@ -256,12 +255,12 @@ class DownloadsSearch extends SearchDelegate {
             PageRouteBuilder(
               opaque: false,
               pageBuilder: (_, __, ___) => PlayScreen(
-                data: {
-                  'response': suggestionList,
-                  'index': index,
-                  'offline': isDowns,
-                },
+                songsList: suggestionList,
+                index: index,
+                offline: isDowns,
                 fromMiniplayer: false,
+                fromDownloads: isDowns,
+                recommend: false,
               ),
             ),
           );

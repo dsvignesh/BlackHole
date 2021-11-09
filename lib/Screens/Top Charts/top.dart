@@ -1,11 +1,14 @@
 import 'package:blackhole/CustomWidgets/custom_physics.dart';
 import 'package:blackhole/CustomWidgets/empty_screen.dart';
+import 'package:blackhole/Helpers/countrycodes.dart';
 import 'package:blackhole/Screens/Search/search.dart';
+import 'package:blackhole/Screens/Settings/setting.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:html_unescape/html_unescape_small.dart';
 import 'package:http/http.dart';
 
@@ -18,11 +21,8 @@ bool emptyRegional = false;
 bool emptyGlobal = false;
 
 class TopCharts extends StatefulWidget {
-  final String region;
   final PageController pageController;
-  const TopCharts(
-      {Key? key, required this.region, required this.pageController})
-      : super(key: key);
+  const TopCharts({Key? key, required this.pageController}) : super(key: key);
 
   @override
   _TopChartsState createState() => _TopChartsState();
@@ -36,81 +36,103 @@ class _TopChartsState extends State<TopCharts>
   Widget build(BuildContext cntxt) {
     super.build(context);
     return DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            bottom: TabBar(
-              tabs: [
-                Tab(
-                  child: Text(
-                    AppLocalizations.of(context)!.local,
-                    style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyText1!.color),
-                  ),
-                ),
-                Tab(
-                  child: Text(
-                    AppLocalizations.of(context)!.global,
-                    style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyText1!.color),
-                  ),
-                ),
-              ],
-            ),
-            title: Text(
-              AppLocalizations.of(context)!.spotifyTopCharts,
-              style: TextStyle(
-                fontSize: 18,
-                color: Theme.of(context).textTheme.bodyText1!.color,
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: IconButton(
+                icon: const Icon(Icons.my_location_rounded),
+                onPressed: () async {
+                  await SpotifyCountry().changeCountry(context: context);
+                },
               ),
             ),
-            centerTitle: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: Builder(
-              builder: (BuildContext context) {
-                return Transform.rotate(
-                  angle: 22 / 7 * 2,
-                  child: IconButton(
-                    color: Theme.of(context).iconTheme.color,
-                    icon: const Icon(Icons
-                        .horizontal_split_rounded), // line_weight_rounded),
-                    onPressed: () {
-                      Scaffold.of(cntxt).openDrawer();
-                    },
-                    tooltip:
-                        MaterialLocalizations.of(cntxt).openAppDrawerTooltip,
+          ],
+          bottom: TabBar(
+            tabs: [
+              Tab(
+                child: Text(
+                  AppLocalizations.of(context)!.local,
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyText1!.color,
                   ),
-                );
-              },
+                ),
+              ),
+              Tab(
+                child: Text(
+                  AppLocalizations.of(context)!.global,
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyText1!.color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          title: Text(
+            AppLocalizations.of(context)!.spotifyTopCharts,
+            style: TextStyle(
+              fontSize: 18,
+              color: Theme.of(context).textTheme.bodyText1!.color,
             ),
           ),
-          body: NotificationListener(
-            onNotification: (overscroll) {
-              if (overscroll is OverscrollNotification &&
-                  overscroll.overscroll != 0 &&
-                  overscroll.dragDetails != null) {
-                widget.pageController.animateToPage(
-                    overscroll.overscroll < 0 ? 0 : 2,
-                    curve: Curves.ease,
-                    duration: const Duration(milliseconds: 150));
-              }
-              return true;
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (BuildContext context) {
+              return Transform.rotate(
+                angle: 22 / 7 * 2,
+                child: IconButton(
+                  color: Theme.of(context).iconTheme.color,
+                  icon: const Icon(
+                    Icons.horizontal_split_rounded,
+                  ),
+                  onPressed: () {
+                    Scaffold.of(cntxt).openDrawer();
+                  },
+                  tooltip: MaterialLocalizations.of(cntxt).openAppDrawerTooltip,
+                ),
+              );
             },
-            child: TabBarView(
-              physics: const CustomPhysics(),
-              children: [
-                TopPage(
-                  region: widget.region,
-                ),
-                const TopPage(
-                  region: 'global',
-                ),
-              ],
-            ),
           ),
-        ));
+        ),
+        body: NotificationListener(
+          onNotification: (overscroll) {
+            if (overscroll is OverscrollNotification &&
+                overscroll.overscroll != 0 &&
+                overscroll.dragDetails != null) {
+              widget.pageController.animateToPage(
+                overscroll.overscroll < 0 ? 0 : 2,
+                curve: Curves.ease,
+                duration: const Duration(milliseconds: 150),
+              );
+            }
+            return true;
+          },
+          child: TabBarView(
+            physics: const CustomPhysics(),
+            children: [
+              ValueListenableBuilder(
+                valueListenable: Hive.box('settings').listenable(),
+                builder: (BuildContext context, Box box, Widget? widget) {
+                  return TopPage(
+                    region: CountryCodes
+                        .countryCodes[box.get('region', defaultValue: 'India')]
+                        .toString(),
+                  );
+                },
+              ),
+              const TopPage(
+                region: 'global',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -123,9 +145,8 @@ Future<List> scrapData(String region) async {
 
   if (res.statusCode != 200) return List.empty();
   final List result = RegExp(
-          r'\<td class=\"chart-table-image\"\>\n[ ]*?\<a href=\"https:\/\/open\.spotify\.com\/track\/(.*?)\" target=\"_blank\"\>\n[ ]*?\<img src=\"(https:\/\/i\.scdn\.co\/image\/.*?)\"\>\n[ ]*?\<\/a\>\n[ ]*?<\/td\>\n[ ]*?<td class=\"chart-table-position\">([0-9]*?)<\/td>\n[ ]*?<td class=\"chart-table-trend\">[.|\n| ]*<.*\n[ ]*<.*\n[ ]*<.*\n[ ]*<.*\n[ ]*<td class=\"chart-table-track\">\n[ ]*?<strong>(.*?)<\/strong>\n[ ]*?<span>by (.*?)<\/span>\n[ ]*?<\/td>\n[ ]*?<td class="chart-table-streams">(.*?)<\/td>')
-      .allMatches(res.body)
-      .map((m) {
+    r'\<td class=\"chart-table-image\"\>\n[ ]*?\<a href=\"https:\/\/open\.spotify\.com\/track\/(.*?)\" target=\"_blank\"\>\n[ ]*?\<img src=\"(https:\/\/i\.scdn\.co\/image\/.*?)\"\>\n[ ]*?\<\/a\>\n[ ]*?<\/td\>\n[ ]*?<td class=\"chart-table-position\">([0-9]*?)<\/td>\n[ ]*?<td class=\"chart-table-trend\">[.|\n| ]*<.*\n[ ]*<.*\n[ ]*<.*\n[ ]*<.*\n[ ]*<td class=\"chart-table-track\">\n[ ]*?<strong>(.*?)<\/strong>\n[ ]*?<span>by (.*?)<\/span>\n[ ]*?<\/td>\n[ ]*?<td class="chart-table-streams">(.*?)<\/td>',
+  ).allMatches(res.body).map((m) {
     return {
       'id': m[1],
       'image': m[2],
@@ -217,70 +238,86 @@ class _TopPageState extends State<TopPage>
         if (showList.length <= 50)
           Expanded(
             child: isListEmpty
-                ? EmptyScreen().emptyScreen(context, 0, ':( ', 100, 'ERROR', 60,
-                    'Service Unavailable', 20)
+                ? emptyScreen(
+                    context,
+                    0,
+                    ':( ',
+                    100,
+                    'ERROR',
+                    60,
+                    'Service Unavailable',
+                    20,
+                  )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                          height: MediaQuery.of(context).size.width / 7,
-                          width: MediaQuery.of(context).size.width / 7,
-                          child: const CircularProgressIndicator()),
+                        height: MediaQuery.of(context).size.width / 7,
+                        width: MediaQuery.of(context).size.width / 7,
+                        child: const CircularProgressIndicator(),
+                      ),
                     ],
                   ),
           )
         else
           Expanded(
-              child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            itemCount: showList.length,
-            itemExtent: 70.0,
-            itemBuilder: (context, index) {
-              return ListTile(
-                leading: Card(
-                  elevation: 5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(7.0),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: [
-                      const Image(
-                        image: AssetImage('assets/cover.jpg'),
-                      ),
-                      if (showList[index]['image'] != '')
-                        CachedNetworkImage(
-                          imageUrl: showList[index]['image'].toString(),
-                          errorWidget: (context, _, __) => const Image(
-                            image: AssetImage('assets/cover.jpg'),
-                          ),
-                          placeholder: (context, url) => const Image(
-                            image: AssetImage('assets/cover.jpg'),
-                          ),
+            child: ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              itemCount: showList.length,
+              itemExtent: 70.0,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  leading: Card(
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7.0),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        const Image(
+                          image: AssetImage('assets/cover.jpg'),
                         ),
-                    ],
+                        if (showList[index]['image'] != '')
+                          CachedNetworkImage(
+                            fit: BoxFit.cover,
+                            imageUrl: showList[index]['image'].toString(),
+                            errorWidget: (context, _, __) => const Image(
+                              fit: BoxFit.cover,
+                              image: AssetImage('assets/cover.jpg'),
+                            ),
+                            placeholder: (context, url) => const Image(
+                              fit: BoxFit.cover,
+                              image: AssetImage('assets/cover.jpg'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                title: Text(
-                  showList[index]['position'] == null
-                      ? '${showList[index]["title"]}'
-                      : '${showList[index]['position']}. ${showList[index]["title"]}',
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${showList[index]['artist']}',
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  Navigator.push(
+                  title: Text(
+                    showList[index]['position'] == null
+                        ? '${showList[index]["title"]}'
+                        : '${showList[index]['position']}. ${showList[index]["title"]}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${showList[index]['artist']}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => SearchPage(
-                              query: showList[index]['title'].toString())));
-                },
-              );
-            },
-          )),
+                        builder: (context) => SearchPage(
+                          query: showList[index]['title'].toString(),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
       ],
     );
   }

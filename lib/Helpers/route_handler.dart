@@ -3,7 +3,6 @@ import 'package:blackhole/Helpers/audio_query.dart';
 import 'package:blackhole/Screens/Common/song_list.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 
 class HandleRoute {
@@ -50,11 +49,11 @@ class SongUrlHandler extends StatelessWidget {
           PageRouteBuilder(
             opaque: false,
             pageBuilder: (_, __, ___) => PlayScreen(
-              data: {
-                'response': value['songs'],
-                'index': 0,
-                'offline': false,
-              },
+              songsList: value['songs'] as List,
+              index: 0,
+              offline: false,
+              fromDownloads: false,
+              recommend: true,
               fromMiniplayer: false,
             ),
           ),
@@ -64,10 +63,11 @@ class SongUrlHandler extends StatelessWidget {
         Navigator.push(
           context,
           PageRouteBuilder(
-              opaque: false,
-              pageBuilder: (_, __, ___) => SongsListPage(
-                    listItem: value,
-                  )),
+            opaque: false,
+            pageBuilder: (_, __, ___) => SongsListPage(
+              listItem: value,
+            ),
+          ),
         );
       }
     });
@@ -80,22 +80,13 @@ class OfflinePlayHandler extends StatelessWidget {
   const OfflinePlayHandler({Key? key, required this.id}) : super(key: key);
 
   Future<List> playOfflineSong(String id) async {
-    final List cachedSongsMap =
-        Hive.box('cache').get('offlineSongsData', defaultValue: []) as List;
+    final OfflineAudioQuery offlineAudioQuery = OfflineAudioQuery();
+    await offlineAudioQuery.requestPermission();
 
-    final int index =
-        cachedSongsMap.indexWhere((i) => i['_id'].toString() == id);
-    if (index == -1) {
-      final OfflineAudioQuery offlineAudioQuery = OfflineAudioQuery();
-      await offlineAudioQuery.requestPermission();
+    final List<SongModel> songs = await offlineAudioQuery.getSongs();
+    final int index = songs.indexWhere((i) => i.id.toString() == id);
 
-      final List<SongModel> temp = await offlineAudioQuery.getSongs();
-      final int index = temp.indexWhere((i) => i.id.toString() == id);
-      final List cachedSongsMap =
-          await offlineAudioQuery.getArtwork([temp[index]]);
-      return [0, cachedSongsMap];
-    }
-    return [index, cachedSongsMap];
+    return [index, songs];
   }
 
   @override
@@ -106,7 +97,11 @@ class OfflinePlayHandler extends StatelessWidget {
         PageRouteBuilder(
           opaque: false,
           pageBuilder: (_, __, ___) => PlayScreen(
-            data: {'response': value[1], 'index': value[0], 'offline': true},
+            songsList: value[1] as List<SongModel>,
+            index: value[0] as int,
+            offline: true,
+            fromDownloads: false,
+            recommend: false,
             fromMiniplayer: false,
           ),
         ),

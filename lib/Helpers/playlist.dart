@@ -1,6 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:blackhole/Helpers/mediaitem_converter.dart';
-import 'package:blackhole/Helpers/songs_count.dart';
+import 'package:blackhole/Helpers/songs_count.dart' as songs_count;
 import 'package:hive/hive.dart';
 
 bool checkPlaylist(String name, String key) {
@@ -23,7 +23,7 @@ Future<void> addMapToPlaylist(String name, Map info) async {
   final Box playlistBox = Hive.box(name);
   final List _songs = playlistBox.values.toList();
   info.addEntries([MapEntry('dateAdded', DateTime.now().toString())]);
-  AddSongsCount().addSong(
+  songs_count.addSongsCount(
     name,
     playlistBox.values.length + 1,
     _songs.length >= 4
@@ -36,25 +36,27 @@ Future<void> addMapToPlaylist(String name, Map info) async {
 Future<void> addItemToPlaylist(String name, MediaItem mediaItem) async {
   if (name != 'Favorite Songs') await Hive.openBox(name);
   final Box playlistBox = Hive.box(name);
-  final Map info = MediaItemConverter().mediaItemtoMap(mediaItem);
+  final Map info = MediaItemConverter.mediaItemtoMap(mediaItem);
   info.addEntries([MapEntry('dateAdded', DateTime.now().toString())]);
   final List _songs = playlistBox.values.toList();
-  AddSongsCount().addSong(
+  songs_count.addSongsCount(
     name,
     playlistBox.values.length + 1,
     _songs.length >= 4
         ? _songs.sublist(0, 4)
         : _songs.sublist(0, _songs.length),
   );
-  playlistBox.put(mediaItem.id.toString(), info);
+  playlistBox.put(mediaItem.id, info);
 }
 
 Future<void> addPlaylist(String inputName, List data) async {
-  String name = inputName;
+  final RegExp avoid = RegExp(r'[\.\\\*\:\"\?#/;\|]');
+  String name = inputName.replaceAll(avoid, '').replaceAll('  ', ' ');
+
   await Hive.openBox(name);
   final Box playlistBox = Hive.box(name);
 
-  AddSongsCount().addSong(
+  songs_count.addSongsCount(
     name,
     data.length,
     data.length >= 4 ? data.sublist(0, 4) : data.sublist(0, data.length),
