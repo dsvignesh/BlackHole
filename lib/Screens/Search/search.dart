@@ -1,4 +1,21 @@
-import 'dart:ui';
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
 
 import 'package:blackhole/APIs/api.dart';
 import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
@@ -15,7 +32,6 @@ import 'package:blackhole/Screens/Player/audioplayer.dart';
 import 'package:blackhole/Screens/Search/albums.dart';
 import 'package:blackhole/Screens/Search/artists.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
@@ -23,8 +39,13 @@ import 'package:hive/hive.dart';
 class SearchPage extends StatefulWidget {
   final String query;
   final bool fromHome;
-  const SearchPage({Key? key, required this.query, this.fromHome = false})
-      : super(key: key);
+  final bool autofocus;
+  const SearchPage({
+    Key? key,
+    required this.query,
+    this.fromHome = false,
+    this.autofocus = false,
+  }) : super(key: key);
 
   @override
   _SearchPageState createState() => _SearchPageState();
@@ -64,8 +85,10 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> fetchResults() async {
     // this fetches top 5 songs results
-    final List songResults = await SaavnAPI()
-        .fetchSongSearchResults(query == '' ? widget.query : query, '5');
+    final List songResults = await SaavnAPI().fetchSongSearchResults(
+      searchQuery: query == '' ? widget.query : query,
+      count: 5,
+    );
     if (songResults.isNotEmpty) searchedData['Songs'] = songResults;
     fetched = true;
     // this fetches albums, playlists, artists, etc
@@ -121,7 +144,7 @@ class _SearchPageState extends State<SearchPage> {
                 body: SearchBar(
                   controller: controller,
                   liveSearch: liveSearch,
-                  autofocus: true,
+                  autofocus: widget.autofocus,
                   hintText: AppLocalizations.of(context)!.searchText,
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back_rounded),
@@ -219,8 +242,8 @@ class _SearchPageState extends State<SearchPage> {
                           ? SizedBox(
                               child: Center(
                                 child: SizedBox(
-                                  height: MediaQuery.of(context).size.width / 7,
-                                  width: MediaQuery.of(context).size.width / 7,
+                                  height: MediaQuery.of(context).size.width / 8,
+                                  width: MediaQuery.of(context).size.width / 8,
                                   child: const CircularProgressIndicator(),
                                 ),
                               ),
@@ -229,7 +252,7 @@ class _SearchPageState extends State<SearchPage> {
                               ? nothingFound(context)
                               : SingleChildScrollView(
                                   padding: const EdgeInsets.only(
-                                    top: 80,
+                                    top: 70,
                                   ),
                                   physics: const BouncingScrollPhysics(),
                                   child: Column(
@@ -239,26 +262,17 @@ class _SearchPageState extends State<SearchPage> {
                                             position[e].toString();
                                         final List? value =
                                             searchedData[key] as List?;
-                                        final bool first = e == sortedKeys[0];
+
                                         if (value == null) {
                                           return const SizedBox();
                                         }
                                         return Column(
                                           children: [
                                             Padding(
-                                              padding: first
-                                                  ? const EdgeInsets.fromLTRB(
-                                                      25,
-                                                      0,
-                                                      0,
-                                                      0,
-                                                    )
-                                                  : const EdgeInsets.fromLTRB(
-                                                      25,
-                                                      30,
-                                                      0,
-                                                      0,
-                                                    ),
+                                              padding: const EdgeInsets.only(
+                                                left: 25,
+                                                top: 10,
+                                              ),
                                               child: Row(
                                                 children: [
                                                   Text(
@@ -280,12 +294,9 @@ class _SearchPageState extends State<SearchPage> {
                                               physics:
                                                   const NeverScrollableScrollPhysics(),
                                               shrinkWrap: true,
-                                              padding:
-                                                  const EdgeInsets.fromLTRB(
-                                                5,
-                                                0,
-                                                10,
-                                                0,
+                                              padding: const EdgeInsets.only(
+                                                left: 5,
+                                                right: 10,
                                               ),
                                               itemBuilder: (context, index) {
                                                 final int count = value[index]
@@ -444,25 +455,9 @@ class _SearchPageState extends State<SearchPage> {
                                                                         value[0]['type'] ==
                                                                             'artist')
                                                                 ? ArtistSearchPage(
-                                                                    artistName: value[index]
-                                                                            [
-                                                                            'title']
-                                                                        .toString(),
-                                                                    artistToken:
-                                                                        value[index]['artistToken']
-                                                                            .toString(),
-                                                                    artistImage: value[index]
-                                                                            [
-                                                                            'image']
-                                                                        .toString()
-                                                                        .replaceAll(
-                                                                          '150x150',
-                                                                          '500x500',
-                                                                        )
-                                                                        .replaceAll(
-                                                                          '50x50',
-                                                                          '500x500',
-                                                                        ),
+                                                                    data: value[
+                                                                            index]
+                                                                        as Map,
                                                                   )
                                                                 : key == 'Songs'
                                                                     ? PlayScreen(
@@ -612,7 +607,7 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
             ),
-            MiniPlayer(),
+            const MiniPlayer(),
           ],
         ),
       ),

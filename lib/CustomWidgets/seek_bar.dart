@@ -1,15 +1,37 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:math';
 
-import 'package:blackhole/main.dart';
+import 'package:blackhole/Screens/Player/audioplayer.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SeekBar extends StatefulWidget {
+  final AudioPlayerHandler audioHandler;
   final Duration duration;
   final Duration position;
   final Duration bufferedPosition;
   final bool offline;
+  final double width;
+  final double height;
   final ValueChanged<Duration>? onChanged;
   final ValueChanged<Duration>? onChangeEnd;
 
@@ -17,6 +39,9 @@ class SeekBar extends StatefulWidget {
     required this.duration,
     required this.position,
     required this.offline,
+    required this.audioHandler,
+    required this.width,
+    required this.height,
     this.bufferedPosition = Duration.zero,
     this.onChanged,
     this.onChangeEnd,
@@ -49,123 +74,119 @@ class _SeekBarState extends State<SeekBar> {
     if (_dragValue != null && !_dragging) {
       _dragValue = null;
     }
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.95,
-      height: 60,
-      child: Stack(
-        children: [
-          SliderTheme(
-            data: _sliderThemeData.copyWith(
-              thumbShape: HiddenThumbComponentShape(),
-              activeTrackColor:
-                  Theme.of(context).iconTheme.color!.withOpacity(0.5),
-              inactiveTrackColor:
-                  Theme.of(context).iconTheme.color!.withOpacity(0.3),
-              trackHeight: 4.0,
-              // trackShape: RoundedRectSliderTrackShape(),
-              trackShape: const RectangularSliderTrackShape(),
-            ),
-            child: ExcludeSemantics(
-              child: Slider(
-                max: widget.duration.inMilliseconds.toDouble(),
-                value: min(
-                  widget.bufferedPosition.inMilliseconds.toDouble(),
-                  widget.duration.inMilliseconds.toDouble(),
-                ),
-                onChanged: (value) {},
-              ),
-            ),
+    return Stack(
+      children: [
+        SliderTheme(
+          data: _sliderThemeData.copyWith(
+            thumbShape: HiddenThumbComponentShape(),
+            activeTrackColor:
+                Theme.of(context).iconTheme.color!.withOpacity(0.5),
+            inactiveTrackColor:
+                Theme.of(context).iconTheme.color!.withOpacity(0.3),
+            // trackShape: RoundedRectSliderTrackShape(),
+            trackShape: const RectangularSliderTrackShape(),
           ),
-          SliderTheme(
-            data: _sliderThemeData.copyWith(
-              inactiveTrackColor: Colors.transparent,
-              activeTrackColor: Theme.of(context).iconTheme.color,
-              thumbColor: Theme.of(context).iconTheme.color,
-              trackHeight: 4.0,
-            ),
+          child: ExcludeSemantics(
             child: Slider(
               max: widget.duration.inMilliseconds.toDouble(),
-              value: value,
-              onChanged: (value) {
-                if (!_dragging) {
-                  _dragging = true;
-                }
-                setState(() {
-                  _dragValue = value;
-                });
-                widget.onChanged?.call(Duration(milliseconds: value.round()));
-              },
-              onChangeEnd: (value) {
-                widget.onChangeEnd?.call(Duration(milliseconds: value.round()));
-                _dragging = false;
-              },
+              value: min(
+                widget.bufferedPosition.inMilliseconds.toDouble(),
+                widget.duration.inMilliseconds.toDouble(),
+              ),
+              onChanged: (value) {},
             ),
           ),
-          // if (widget.offline)
-          //   Positioned(
-          //     left: 22.0,
-          //     bottom: 45.0,
-          //     child: Icon(
-          //       Icons.wifi_off_rounded,
-          //       color: Theme.of(context).disabledColor,
-          //       size: 15.0,
-          //     ),
-          //   ),
-          Positioned(
-            right: 13.0,
-            bottom: 25.0,
-            child: StreamBuilder<double>(
-              stream: audioHandler.speed,
-              builder: (context, snapshot) {
-                final String speedValue =
-                    '${snapshot.data?.toStringAsFixed(1) ?? 1.0}x';
-                return IconButton(
-                  icon: Text(
-                    speedValue,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: speedValue == '1.0x'
-                          ? Theme.of(context).disabledColor
-                          : null,
-                    ),
+        ),
+        SliderTheme(
+          data: _sliderThemeData.copyWith(
+            inactiveTrackColor: Colors.transparent,
+            activeTrackColor: Theme.of(context).iconTheme.color,
+            thumbColor: Theme.of(context).iconTheme.color,
+          ),
+          child: Slider(
+            max: widget.duration.inMilliseconds.toDouble(),
+            value: value,
+            onChanged: (value) {
+              if (!_dragging) {
+                _dragging = true;
+              }
+              setState(() {
+                _dragValue = value;
+              });
+              widget.onChanged?.call(Duration(milliseconds: value.round()));
+            },
+            onChangeEnd: (value) {
+              widget.onChangeEnd?.call(Duration(milliseconds: value.round()));
+              _dragging = false;
+            },
+          ),
+        ),
+        // if (widget.offline)
+        //   Positioned(
+        //     left: 22.0,
+        //     bottom: 45.0,
+        //     child: Icon(
+        //       Icons.wifi_off_rounded,
+        //       color: Theme.of(context).disabledColor,
+        //       size: 15.0,
+        //     ),
+        //   ),
+        Positioned(
+          right: 13.0,
+          bottom: widget.height / 15,
+          child: StreamBuilder<double>(
+            stream: widget.audioHandler.speed,
+            builder: (context, snapshot) {
+              final String speedValue =
+                  '${snapshot.data?.toStringAsFixed(1) ?? 1.0}x';
+              return IconButton(
+                icon: Text(
+                  speedValue,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: speedValue == '1.0x'
+                        ? Theme.of(context).disabledColor
+                        : null,
                   ),
-                  onPressed: () {
-                    showSliderDialog(
-                      context: context,
-                      title: AppLocalizations.of(context)!.adjustSpeed,
-                      divisions: 25,
-                      min: 0.5,
-                      max: 3.0,
-                    );
-                  },
-                );
-              },
-            ),
+                ),
+                onPressed: () {
+                  showSliderDialog(
+                    context: context,
+                    title: AppLocalizations.of(context)!.adjustSpeed,
+                    divisions: 25,
+                    min: 0.5,
+                    max: 3.0,
+                    audioHandler: widget.audioHandler,
+                  );
+                },
+              );
+            },
           ),
-          Positioned(
-            left: 25.0,
-            bottom: 0.0,
-            child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                      .firstMatch('$_position')
-                      ?.group(1) ??
-                  '$_position',
-              // style: Theme.of(context).textTheme.caption,
-            ),
+        ),
+        Positioned(
+          left: 25.0,
+          bottom: widget.height / 30,
+          child: Text(
+            RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
+                    .firstMatch('$_position')
+                    ?.group(1) ??
+                '$_position',
           ),
-          Positioned(
-            right: 25.0,
-            bottom: 0.0,
-            child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                      .firstMatch('$_duration')
-                      ?.group(1) ??
-                  '$_duration',
-              // style: Theme.of(context).textTheme.caption,
-            ),
+        ),
+        Positioned(
+          right: 25.0,
+          bottom: widget.height / 30,
+          child: Text(
+            RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
+                    .firstMatch('$_duration')
+                    ?.group(1) ??
+                '$_duration',
+            // style: Theme.of(context).textTheme.caption!.copyWith(
+            //       color: Theme.of(context).iconTheme.color,
+            //     ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -200,6 +221,7 @@ void showSliderDialog({
   required int divisions,
   required double min,
   required double max,
+  required AudioPlayerHandler audioHandler,
   String valueSuffix = '',
 }) {
   showDialog<void>(

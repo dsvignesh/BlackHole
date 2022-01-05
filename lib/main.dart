@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2021 Ankit Sangwan
- *
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
  * BlackHole is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -13,6 +13,8 @@
  *
  * You should have received a copy of the GNU Lesser General Public License
  * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
  */
 
 import 'dart:io';
@@ -27,30 +29,30 @@ import 'package:blackhole/Screens/Library/downloads.dart';
 import 'package:blackhole/Screens/Library/nowplaying.dart';
 import 'package:blackhole/Screens/Library/playlists.dart';
 import 'package:blackhole/Screens/Library/recent.dart';
-import 'package:blackhole/Screens/LocalMusic/localplaylists.dart';
-import 'package:blackhole/Screens/LocalMusic/my_music.dart';
 import 'package:blackhole/Screens/Login/auth.dart';
 import 'package:blackhole/Screens/Login/pref.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
 import 'package:blackhole/Screens/Settings/setting.dart';
 import 'package:blackhole/Services/audio_service.dart';
+import 'package:blackhole/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:hive/hive.dart';
+import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-
-// TODO: use getit to register handler in future
-late AudioPlayerHandler audioHandler;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Paint.enableDithering = true;
 
-  await Hive.initFlutter();
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await Hive.initFlutter('BlackHole');
+  } else {
+    await Hive.initFlutter();
+  }
   await openHiveBox('settings');
   await openHiveBox('downloads');
   await openHiveBox('Favorite Songs');
@@ -82,7 +84,7 @@ Future<void> setOptimalDisplayMode() async {
 }
 
 Future<void> startService() async {
-  audioHandler = await AudioService.init(
+  final AudioPlayerHandler audioHandler = await AudioService.init(
     builder: () => AudioPlayerHandlerImpl(),
     config: AudioServiceConfig(
       androidNotificationChannelId: 'com.igm.dsmusic.channel.audio',
@@ -95,14 +97,20 @@ Future<void> startService() async {
       notificationColor: Colors.grey[900],
     ),
   );
+  GetIt.I.registerSingleton<AudioPlayerHandler>(audioHandler);
+  GetIt.I.registerSingleton<MyTheme>(MyTheme());
 }
 
 Future<void> openHiveBox(String boxName, {bool limit = false}) async {
   final box = await Hive.openBox(boxName).onError((error, stackTrace) async {
     final Directory dir = await getApplicationDocumentsDirectory();
     final String dirPath = dir.path;
-    final File dbFile = File('$dirPath/$boxName.hive');
-    final File lockFile = File('$dirPath/$boxName.lock');
+    File dbFile = File('$dirPath/$boxName.hive');
+    File lockFile = File('$dirPath/$boxName.lock');
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      dbFile = File('$dirPath/BlackHole/$boxName.hive');
+      lockFile = File('$dirPath/BlackHole/$boxName.lock');
+    }
     await dbFile.delete();
     await lockFile.delete();
     await Hive.openBox(boxName);
@@ -133,12 +141,17 @@ class _MyAppState extends State<MyApp> {
         Hive.box('settings').get('lang', defaultValue: 'English') as String;
     final Map<String, String> codes = {
       'English': 'en',
-      'Russian': 'ru',
+      'French': 'fr',
+      'German': 'de',
+      'Indonesian': 'id',
       'Portuguese': 'pt',
-      'Indonesia': 'id',
+      'Russian': 'ru',
+      'Spanish': 'es',
+      'Tamil': 'ta',
     };
     _locale = Locale(codes[lang]!);
-    currentTheme.addListener(() {
+
+    AppTheme.currentTheme.addListener(() {
       setState(() {});
     });
   }
@@ -162,14 +175,17 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
+      SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.black38,
-        // systemNavigationBarContrastEnforced: false,
-        // systemNavigationBarIconBrightness:
-        //     Theme.of(context).brightness == Brightness.dark
-        //         ? Brightness.light
-        //         : Brightness.dark,
+        systemNavigationBarColor: AppTheme.themeMode == ThemeMode.dark
+            ? Colors.black38
+            : Colors.white,
+        statusBarIconBrightness: AppTheme.themeMode == ThemeMode.dark
+            ? Brightness.light
+            : Brightness.dark,
+        systemNavigationBarIconBrightness: AppTheme.themeMode == ThemeMode.dark
+            ? Brightness.light
+            : Brightness.dark,
       ),
     );
     SystemChrome.setPreferredOrientations([
@@ -183,80 +199,12 @@ class _MyAppState extends State<MyApp> {
       title: 'DSMusic',
       restorationScopeId: 'blackhole',
       debugShowCheckedModeBanner: false,
-      themeMode: currentTheme.currentTheme(),
-      theme: ThemeData(
-        textSelectionTheme: TextSelectionThemeData(
-          selectionHandleColor: currentTheme.currentColor(),
-          cursorColor: currentTheme.currentColor(),
-          selectionColor: currentTheme.currentColor(),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          focusedBorder: UnderlineInputBorder(
-            borderSide:
-                BorderSide(width: 1.5, color: currentTheme.currentColor()),
-          ),
-        ),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: AppBarTheme(
-          backgroundColor: currentTheme.currentColor(),
-        ),
-        disabledColor: Colors.grey[600],
-        brightness: Brightness.light,
-        indicatorColor: currentTheme.currentColor(),
-        progressIndicatorTheme: const ProgressIndicatorThemeData()
-            .copyWith(color: currentTheme.currentColor()),
-        iconTheme: IconThemeData(
-          color: Colors.grey[800],
-          opacity: 1.0,
-          size: 24.0,
-        ),
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.grey[800],
-              brightness: Brightness.light,
-              secondary: currentTheme.currentColor(),
-            ),
+      themeMode: AppTheme.themeMode,
+      theme: AppTheme.lightTheme(
+        context: context,
       ),
-      darkTheme: ThemeData(
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            primary: Colors.white,
-            backgroundColor: Colors.transparent,
-            elevation: 0.0,
-          ),
-        ),
-        textSelectionTheme: TextSelectionThemeData(
-          selectionHandleColor: currentTheme.currentColor(),
-          cursorColor: currentTheme.currentColor(),
-          selectionColor: currentTheme.currentColor(),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          focusedBorder: UnderlineInputBorder(
-            borderSide:
-                BorderSide(width: 1.5, color: currentTheme.currentColor()),
-          ),
-        ),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        brightness: Brightness.dark,
-        appBarTheme: AppBarTheme(
-          color: currentTheme.getCanvasColor(),
-          foregroundColor: Colors.white,
-        ),
-        canvasColor: currentTheme.getCanvasColor(),
-        cardColor: currentTheme.getCardColor(),
-        dialogBackgroundColor: currentTheme.getCardColor(),
-        progressIndicatorTheme: const ProgressIndicatorThemeData()
-            .copyWith(color: currentTheme.currentColor()),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-          opacity: 1.0,
-          size: 24.0,
-        ),
-        indicatorColor: currentTheme.currentColor(),
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Colors.white,
-              secondary: currentTheme.currentColor(),
-              brightness: Brightness.dark,
-            ),
+      darkTheme: AppTheme.darkTheme(
+        context: context,
       ),
       locale: _locale,
       localizationsDelegates: const [
@@ -267,9 +215,13 @@ class _MyAppState extends State<MyApp> {
       ],
       supportedLocales: const [
         Locale('en', ''), // English, no country code
+        Locale('fr', ''), // French
+        Locale('de', ''), // German
+        Locale('id', ''), // Indonesian
+        Locale('pt', ''), // Portuguese
         Locale('ru', ''), // Russian
-        Locale('pt', ''), // Portuguese, no country code
-        Locale('id', ''), // Indonesia, no country code
+        Locale('es', ''), // Spanish
+        Locale('ta', ''), // Tamil
       ],
       routes: {
         '/': (context) => initialFuntion(),
@@ -277,8 +229,6 @@ class _MyAppState extends State<MyApp> {
         '/setting': (context) => const SettingPage(),
         '/about': (context) => AboutScreen(),
         '/playlists': (context) => PlaylistScreen(),
-        '/localplaylists': (context) => LocalPlaylistScreen(),
-        '/mymusic': (context) => MyMusicPage(),
         '/nowplaying': (context) => NowPlaying(),
         '/recent': (context) => RecentlyPlayed(),
         '/downloads': (context) => const Downloads(),

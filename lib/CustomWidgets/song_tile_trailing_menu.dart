@@ -1,7 +1,28 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'package:audio_service/audio_service.dart';
 import 'package:blackhole/CustomWidgets/add_playlist.dart';
 import 'package:blackhole/Helpers/add_mediitem_to_queue.dart';
 import 'package:blackhole/Helpers/mediaitem_converter.dart';
+import 'package:blackhole/Screens/Common/song_list.dart';
+import 'package:blackhole/Screens/Search/albums.dart';
 import 'package:blackhole/Screens/Search/search.dart';
 import 'package:blackhole/Services/youtube_services.dart';
 import 'package:flutter/cupertino.dart';
@@ -74,6 +95,32 @@ class _SongTileTrailingMenuState extends State<SongTileTrailingMenu> {
           ),
         ),
         PopupMenuItem(
+          value: 4,
+          child: Row(
+            children: [
+              Icon(
+                Icons.album_rounded,
+                color: Theme.of(context).iconTheme.color,
+              ),
+              const SizedBox(width: 10.0),
+              Text(AppLocalizations.of(context)!.viewAlbum),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 5,
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_rounded,
+                color: Theme.of(context).iconTheme.color,
+              ),
+              const SizedBox(width: 10.0),
+              Text(AppLocalizations.of(context)!.viewArtist),
+            ],
+          ),
+        ),
+        PopupMenuItem(
           value: 3,
           child: Row(
             children: [
@@ -93,11 +140,39 @@ class _SongTileTrailingMenuState extends State<SongTileTrailingMenu> {
         if (value == 3) {
           Share.share(widget.data['perma_url'].toString());
         }
+        if (value == 4) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              opaque: false,
+              pageBuilder: (_, __, ___) => SongsListPage(
+                listItem: {
+                  'type': 'album',
+                  'id': mediaItem.extras?['album_id'],
+                  'title': mediaItem.album,
+                  'image': mediaItem.artUri,
+                },
+              ),
+            ),
+          );
+        }
+        if (value == 5) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              opaque: false,
+              pageBuilder: (_, __, ___) => AlbumSearchPage(
+                query: mediaItem.artist.toString().split(', ').first,
+                type: 'Artists',
+              ),
+            ),
+          );
+        }
         if (value == 0) {
           AddToPlaylist().addToPlaylist(context, mediaItem);
         }
         if (value == 1) {
-          addToNowPlaying(mediaItem, context);
+          addToNowPlaying(context: context, mediaItem: mediaItem);
         }
         if (value == 2) {
           playNext(mediaItem, context);
@@ -246,7 +321,7 @@ class _YtSongTileTrailingMenuState extends State<YtSongTileTrailingMenu> {
               playNext(mediaItem, context);
             }
             if (value == 2) {
-              addToNowPlaying(mediaItem, context);
+              addToNowPlaying(context: context, mediaItem: mediaItem);
             }
             if (value == 3) {
               AddToPlaylist().addToPlaylist(context, mediaItem);

@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'package:app_links/app_links.dart';
 import 'package:blackhole/APIs/api.dart';
 import 'package:blackhole/APIs/spotify_api.dart';
@@ -268,6 +287,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                 : Collage(
                                     imageList: playlistDetails[name]
                                         ['imagesList'] as List,
+                                    showGrid: true,
                                     placeholderImage: 'assets/cover.jpg',
                                   ),
                             title: Text(
@@ -279,7 +299,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     playlistDetails[name]['count'] == 0
                                 ? null
                                 : Text(
-                                    '${playlistDetails[name]['count']} Songs',
+                                    '${playlistDetails[name]['count']} ${AppLocalizations.of(context)!.songs}',
                                   ),
                             trailing: PopupMenuButton(
                               icon: const Icon(Icons.more_vert_rounded),
@@ -528,7 +548,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               ),
             ),
           ),
-          MiniPlayer(),
+          const MiniPlayer(),
         ],
       ),
     );
@@ -662,7 +682,9 @@ Future<void> fetchPlaylists(
                   : ListTile(
                       title: Text(playName),
                       subtitle: Text(
-                        playTotal == 1 ? '$playTotal Song' : '$playTotal Songs',
+                        playTotal == 1
+                            ? '$playTotal ${AppLocalizations.of(context)!.song}'
+                            : '$playTotal ${AppLocalizations.of(context)!.songs}',
                       ),
                       leading: Card(
                         elevation: 8,

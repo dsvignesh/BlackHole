@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
@@ -49,7 +68,7 @@ class FormatResponse {
       }
 
       if (response!.containsKey('Error')) {
-        log('Error at index $i inside FormatResponse: ${response["Error"]}');
+        log('Error at index $i inside FormatSongsResponse: ${response["Error"]}');
       } else {
         searchedList.add(response);
       }
@@ -73,10 +92,16 @@ class FormatResponse {
               response['more_info']?['artistMap']?['artists'].length == 0) {
             artistNames.add('Unknown');
           } else {
-            response['more_info']['artistMap']['artists'][0]['id']
-                .forEach((element) {
-              artistNames.add(element['name']);
-            });
+            try {
+              response['more_info']['artistMap']['artists'][0]['id']
+                  .forEach((element) {
+                artistNames.add(element['name']);
+              });
+            } catch (e) {
+              response['more_info']['artistMap']['artists'].forEach((element) {
+                artistNames.add(element['name']);
+              });
+            }
           }
         } else {
           response['more_info']['artistMap']['featured_artists']
@@ -119,8 +144,9 @@ class FormatResponse {
         'perma_url': response['perma_url'],
         'url': decode(response['more_info']['encrypted_media_url'].toString()),
       };
-      // Hive.box('cache').put(response['id'], info);
+      // Hive.box('cache').put(response['id'].toString(), info);
     } catch (e) {
+      // log('Error inside FormatSingleSongResponse: $e');
       return {'Error': e};
     }
   }
@@ -245,8 +271,12 @@ class FormatResponse {
             : formatString(response['description'].toString()),
         'title': formatString(response['title'].toString()),
         'artist': response['music'] == null
-            ? response['more_info']['music'] == null
-                ? response['more_info']['artistMap']['primary_artists'] == null
+            ? (response['more_info']?['music']) == null
+                ? (response['more_info']?['artistMap']?['primary_artists'] ==
+                            null ||
+                        (response['more_info']?['artistMap']?['primary_artists']
+                                as List)
+                            .isEmpty)
                     ? ''
                     : formatString(
                         response['more_info']['artistMap']['primary_artists'][0]
@@ -267,6 +297,7 @@ class FormatResponse {
             ? 0
             : response['more_info']['song_pids'].toString().split(', ').length,
         'songs_pids': response['more_info']['song_pids'].toString().split(', '),
+        'perma_url': response['url'].toString(),
       };
     } catch (e) {
       log('Error inside formatSingleAlbumResponse: $e');
@@ -304,6 +335,7 @@ class FormatResponse {
             .replaceAll('150x150', '500x500')
             .replaceAll('50x50', '500x500')
             .replaceAll('http:', 'https:'),
+        'perma_url': response['url'].toString(),
       };
     } catch (e) {
       log('Error inside formatSinglePlaylistResponse: $e');
@@ -333,7 +365,7 @@ class FormatResponse {
             : formatString(response['title'].toString()),
         // .split('(')
         // .first
-
+        'perma_url': response['url'].toString(),
         'artist': formatString(response['title'].toString()),
         'album_artist': response['more_info'] == null
             ? response['music']
@@ -356,7 +388,7 @@ class FormatResponse {
       final Map response =
           await formatSingleArtistTopAlbumSongResponse(responseList[i] as Map);
       if (response.containsKey('Error')) {
-        log('Error at index $i inside FormatResponse: ${response["Error"]}');
+        log('Error at index $i inside FormatArtistTopAlbumsResponse: ${response["Error"]}');
       } else {
         result.add(response);
       }
@@ -424,26 +456,40 @@ class FormatResponse {
     }
   }
 
-  // static Future<List> formatArtistSinglesResponse(List response) async {
-  // List result = [];
-  // return result;
-  // }
+  static Future<List> formatSimilarArtistsResponse(List responseList) async {
+    final List result = [];
+    for (int i = 0; i < responseList.length; i++) {
+      final Map response =
+          await formatSingleSimilarArtistResponse(responseList[i] as Map);
+      if (response.containsKey('Error')) {
+        log('Error at index $i inside FormatSimilarArtistsResponse: ${response["Error"]}');
+      } else {
+        result.add(response);
+      }
+    }
+    return result;
+  }
 
-  // static Future<List> formatArtistLatestReleaseResponse(List response) async {
-  //   List result = [];
-  //   return result;
-  // }
-
-  // static Future<List> formatArtistDedicatedArtistPlaylistResponse(
-  //     List response) async {
-  //   List result = [];
-  //   return result;
-  // }
-
-  // static Future<List> formatArtistFeaturedArtistPlaylistResponse(List response) async {
-  //   List result = [];
-  //   return result;
-  // }
+  static Future<Map> formatSingleSimilarArtistResponse(Map response) async {
+    try {
+      return {
+        'id': response['id'],
+        'type': response['type'],
+        'artist': formatString(response['name'].toString()),
+        'title': formatString(response['name'].toString()),
+        'subtitle': capitalize(response['dominantType'].toString()),
+        'image': response['image_url']
+            .toString()
+            .replaceAll('150x150', '500x500')
+            .replaceAll('50x50', '500x500')
+            .replaceAll('http:', 'https:'),
+        'artistToken': response['perma_url'].toString().split('/').last,
+        'perma_url': response['perma_url'].toString(),
+      };
+    } catch (e) {
+      return {'Error': e};
+    }
+  }
 
   static Future<Map> formatSingleShowResponse(Map response) async {
     try {
@@ -468,14 +514,18 @@ class FormatResponse {
 
   static Future<Map> formatHomePageData(Map data) async {
     try {
-      data['new_trending'] = await formatSongsInList(
-        data['new_trending'] as List,
-        fetchDetails: false,
-      );
-      data['new_albums'] = await formatSongsInList(
-        data['new_albums'] as List,
-        fetchDetails: false,
-      );
+      if (data['new_trending'] != null) {
+        data['new_trending'] = await formatSongsInList(
+          data['new_trending'] as List,
+          fetchDetails: false,
+        );
+      }
+      if (data['new_albums'] != null) {
+        data['new_albums'] = await formatSongsInList(
+          data['new_albums'] as List,
+          fetchDetails: false,
+        );
+      }
       if (data['city_mod'] != null) {
         data['city_mod'] = await formatSongsInList(
           data['city_mod'] as List,
@@ -544,12 +594,13 @@ class FormatResponse {
         if (item['type'] == 'song') {
           if (item['mini_obj'] as bool? ?? false) {
             if (fetchDetails) {
-              Map cachedDetails =
-                  Hive.box('cache').get(item['id'], defaultValue: {}) as Map;
+              Map cachedDetails = Hive.box('cache')
+                  .get(item['id'].toString(), defaultValue: {}) as Map;
               if (cachedDetails.isEmpty) {
                 cachedDetails =
                     await SaavnAPI().fetchSongDetails(item['id'].toString());
-                Hive.box('cache').put(cachedDetails['id'], cachedDetails);
+                Hive.box('cache')
+                    .put(cachedDetails['id'].toString(), cachedDetails);
               }
               list[i] = cachedDetails;
             }

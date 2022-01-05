@@ -1,10 +1,30 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'package:blackhole/APIs/api.dart';
+import 'package:blackhole/CustomWidgets/horizontal_albumlist.dart';
 import 'package:blackhole/CustomWidgets/snackbar.dart';
 import 'package:blackhole/Helpers/format.dart';
 import 'package:blackhole/Screens/Common/song_list.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
+import 'package:blackhole/Screens/Search/artists.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
@@ -26,6 +46,8 @@ class _SaavnHomePageState extends State<SaavnHomePage>
     with AutomaticKeepAliveClientMixin<SaavnHomePage> {
   List recentList =
       Hive.box('cache').get('recentSongs', defaultValue: []) as List;
+  Map likedArtists =
+      Hive.box('settings').get('likedArtists', defaultValue: {}) as Map;
   List blacklistedHomeSections = Hive.box('settings')
       .get('blacklistedHomeSections', defaultValue: []) as List;
 
@@ -35,6 +57,7 @@ class _SaavnHomePageState extends State<SaavnHomePage>
       Hive.box('cache').put('homepage', recievedData);
       data = recievedData;
       lists = ['recent', ...?data['collections']];
+      lists.insert((lists.length / 2).round(), 'likedArtists');
     }
     setState(() {});
     recievedData = await FormatResponse.formatPromoLists(data);
@@ -42,6 +65,7 @@ class _SaavnHomePageState extends State<SaavnHomePage>
       Hive.box('cache').put('homepage', recievedData);
       data = recievedData;
       lists = ['recent', ...?data['collections']];
+      lists.insert((lists.length / 2).round(), 'likedArtists');
     }
     setState(() {});
   }
@@ -82,10 +106,11 @@ class _SaavnHomePageState extends State<SaavnHomePage>
       getHomePageData();
       fetched = true;
     }
-    final double boxSize =
+    double boxSize =
         MediaQuery.of(context).size.height > MediaQuery.of(context).size.width
-            ? MediaQuery.of(context).size.width
-            : MediaQuery.of(context).size.height;
+            ? MediaQuery.of(context).size.width / 2
+            : MediaQuery.of(context).size.height / 2.5;
+    if (boxSize > 250) boxSize = 250;
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       shrinkWrap: true,
@@ -114,133 +139,62 @@ class _SaavnHomePageState extends State<SaavnHomePage>
                         ),
                       ],
                     ),
-                    SizedBox(
-                      height: boxSize / 2 + 10,
-                      child: ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-                        itemCount: recentList.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onLongPress: () {
-                              Feedback.forLongPress(context);
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15.0),
-                                    ),
-                                    backgroundColor: Colors.transparent,
-                                    contentPadding: EdgeInsets.zero,
-                                    content: Card(
-                                      elevation: 5,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(15.0),
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: CachedNetworkImage(
-                                        fit: BoxFit.cover,
-                                        errorWidget: (context, _, __) =>
-                                            const Image(
-                                          fit: BoxFit.cover,
-                                          image: AssetImage('assets/cover.jpg'),
-                                        ),
-                                        imageUrl: recentList[index]['image']
-                                            .toString()
-                                            .replaceAll('http:', 'https:')
-                                            .replaceAll('50x50', '500x500')
-                                            .replaceAll('150x150', '500x500'),
-                                        placeholder: (context, url) =>
-                                            const Image(
-                                          fit: BoxFit.cover,
-                                          image: AssetImage('assets/cover.jpg'),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  pageBuilder: (_, __, ___) => PlayScreen(
-                                    songsList: recentList,
-                                    index: index,
-                                    offline: false,
-                                    fromDownloads: false,
-                                    fromMiniplayer: false,
-                                    recommend: true,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: SizedBox(
-                              width: boxSize / 2 - 30,
-                              child: Column(
-                                children: [
-                                  SizedBox.square(
-                                    dimension: boxSize / 2 - 30,
-                                    child: Card(
-                                      elevation: 5,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10.0),
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: CachedNetworkImage(
-                                        fit: BoxFit.cover,
-                                        errorWidget: (context, _, __) =>
-                                            const Image(
-                                          fit: BoxFit.cover,
-                                          image: AssetImage('assets/cover.jpg'),
-                                        ),
-                                        imageUrl: recentList[index]['image']
-                                            .toString()
-                                            .replaceAll('http:', 'https:')
-                                            .replaceAll('50x50', '500x500')
-                                            .replaceAll('150x150', '500x500'),
-                                        placeholder: (context, url) =>
-                                            const Image(
-                                          fit: BoxFit.cover,
-                                          image: AssetImage('assets/cover.jpg'),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${recentList[index]["title"]}',
-                                    textAlign: TextAlign.center,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${recentList[index]["artist"]}',
-                                    textAlign: TextAlign.center,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Theme.of(context)
-                                          .textTheme
-                                          .caption!
-                                          .color,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                    HorizontalAlbumsList(
+                      songsList: recentList,
+                      onTap: (int idx) {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            opaque: false,
+                            pageBuilder: (_, __, ___) => PlayScreen(
+                              songsList: recentList,
+                              index: idx,
+                              offline: false,
+                              fromDownloads: false,
+                              fromMiniplayer: false,
+                              recommend: true,
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
+        }
+        if (lists[idx] == 'likedArtists') {
+          final List likedArtistsList = likedArtists.values.toList();
+          return likedArtists.isEmpty
+              ? const SizedBox()
+              : Column(
+                  children: [
+                    Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(15, 10, 0, 5),
+                          child: Text(
+                            'Liked Artists',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.secondary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    HorizontalAlbumsList(
+                      songsList: likedArtistsList,
+                      onTap: (int idx) {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            opaque: false,
+                            pageBuilder: (_, __, ___) => ArtistSearchPage(
+                              data: likedArtistsList[idx] as Map,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 );
@@ -269,7 +223,7 @@ class _SaavnHomePageState extends State<SaavnHomePage>
                     ),
                   ),
                   SizedBox(
-                    height: boxSize / 2 + 10,
+                    height: boxSize + 10,
                     child: ListView.builder(
                       physics: const BouncingScrollPhysics(),
                       scrollDirection: Axis.horizontal,
@@ -416,13 +370,13 @@ class _SaavnHomePageState extends State<SaavnHomePage>
                             }
                           },
                           child: SizedBox(
-                            width: boxSize / 2 - 30,
+                            width: boxSize - 30,
                             child: Stack(
                               children: [
                                 Column(
                                   children: [
                                     SizedBox.square(
-                                      dimension: boxSize / 2 - 30,
+                                      dimension: boxSize - 30,
                                       child: Card(
                                         elevation: 5,
                                         shape: RoundedRectangleBorder(

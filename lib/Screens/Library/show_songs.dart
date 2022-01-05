@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:io';
 
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
@@ -28,7 +47,9 @@ class _SongsListState extends State<SongsList> {
   bool offline = false;
   bool added = false;
   bool processStatus = false;
-  int sortValue = Hive.box('settings').get('sortValue', defaultValue: 2) as int;
+  int sortValue = Hive.box('settings').get('sortValue', defaultValue: 1) as int;
+  int orderValue =
+      Hive.box('settings').get('orderValue', defaultValue: 1) as int;
 
   Future<void> getSongs() async {
     added = true;
@@ -36,40 +57,66 @@ class _SongsListState extends State<SongsList> {
     offline = widget.offline;
     if (!offline) original = List.from(_songs);
 
-    sortSongs();
+    sortSongs(sortVal: sortValue, order: orderValue);
 
     processStatus = true;
     setState(() {});
   }
 
-  void sortSongs() {
-    if (sortValue == 0) {
-      _songs.sort(
-        (a, b) => a['title']
-            .toString()
-            .toUpperCase()
-            .compareTo(b['title'].toString().toUpperCase()),
-      );
+  void sortSongs({required int sortVal, required int order}) {
+    switch (sortVal) {
+      case 0:
+        _songs.sort(
+          (a, b) => a['title']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['title'].toString().toUpperCase()),
+        );
+        break;
+      case 1:
+        _songs.sort(
+          (a, b) => a['dateAdded']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['dateAdded'].toString().toUpperCase()),
+        );
+        break;
+      case 2:
+        _songs.sort(
+          (a, b) => a['album']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['album'].toString().toUpperCase()),
+        );
+        break;
+      case 3:
+        _songs.sort(
+          (a, b) => a['artist']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['artist'].toString().toUpperCase()),
+        );
+        break;
+      case 4:
+        _songs.sort(
+          (a, b) => a['duration']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['duration'].toString().toUpperCase()),
+        );
+        break;
+      default:
+        _songs.sort(
+          (b, a) => a['dateAdded']
+              .toString()
+              .toUpperCase()
+              .compareTo(b['dateAdded'].toString().toUpperCase()),
+        );
+        break;
     }
-    if (sortValue == 1) {
-      _songs.sort(
-        (b, a) => a['title']
-            .toString()
-            .toUpperCase()
-            .compareTo(b['title'].toString().toUpperCase()),
-      );
-    }
-    if (sortValue == 2) {
-      offline
-          ? _songs.sort(
-              (b, a) => a['lastModified']
-                  .toString()
-                  .compareTo(b['lastModified'].toString()),
-            )
-          : _songs = List.from(original);
-    }
-    if (sortValue == 3) {
-      _songs.shuffle();
+
+    if (order == 1) {
+      _songs = _songs.reversed.toList();
     }
   }
 
@@ -94,100 +141,91 @@ class _SongsListState extends State<SongsList> {
                       borderRadius: BorderRadius.all(Radius.circular(15.0)),
                     ),
                     onSelected: (int value) {
-                      sortValue = value;
-                      Hive.box('settings').put('sortValue', value);
-                      sortSongs();
+                      if (value < 5) {
+                        sortValue = value;
+                        Hive.box('settings').put('sortValue', value);
+                      } else {
+                        orderValue = value - 5;
+                        Hive.box('settings').put('orderValue', orderValue);
+                      }
+                      sortSongs(sortVal: sortValue, order: orderValue);
                       setState(() {});
                     },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 0,
-                        child: Row(
-                          children: [
-                            if (sortValue == 0)
-                              Icon(
-                                Icons.check_rounded,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              )
-                            else
-                              const SizedBox(),
-                            const SizedBox(width: 10),
-                            Text(
-                              AppLocalizations.of(context)!.az,
-                            ),
-                          ],
+                    itemBuilder: (context) {
+                      final List<String> sortTypes = [
+                        AppLocalizations.of(context)!.displayName,
+                        AppLocalizations.of(context)!.dateAdded,
+                        AppLocalizations.of(context)!.album,
+                        AppLocalizations.of(context)!.artist,
+                        AppLocalizations.of(context)!.duration,
+                      ];
+                      final List<String> orderTypes = [
+                        AppLocalizations.of(context)!.inc,
+                        AppLocalizations.of(context)!.dec,
+                      ];
+                      final menuList = <PopupMenuEntry<int>>[];
+                      menuList.addAll(
+                        sortTypes
+                            .map(
+                              (e) => PopupMenuItem(
+                                value: sortTypes.indexOf(e),
+                                child: Row(
+                                  children: [
+                                    if (sortValue == sortTypes.indexOf(e))
+                                      Icon(
+                                        Icons.check_rounded,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white
+                                            : Colors.grey[700],
+                                      )
+                                    else
+                                      const SizedBox(),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      e,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                      menuList.add(
+                        const PopupMenuDivider(
+                          height: 10,
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: 1,
-                        child: Row(
-                          children: [
-                            if (sortValue == 1)
-                              Icon(
-                                Icons.check_rounded,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              )
-                            else
-                              const SizedBox(),
-                            const SizedBox(width: 10),
-                            Text(
-                              AppLocalizations.of(context)!.za,
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 2,
-                        child: Row(
-                          children: [
-                            if (sortValue == 2)
-                              Icon(
-                                Icons.check_rounded,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              )
-                            else
-                              const SizedBox(),
-                            const SizedBox(width: 10),
-                            Text(
-                              offline
-                                  ? AppLocalizations.of(context)!.lastModified
-                                  : AppLocalizations.of(context)!.lastAdded,
-                            ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 3,
-                        child: Row(
-                          children: [
-                            if (sortValue == 3)
-                              Icon(
-                                Icons.shuffle_rounded,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              )
-                            else
-                              const SizedBox(),
-                            const SizedBox(width: 10),
-                            Text(
-                              AppLocalizations.of(context)!.shuffle,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
+                      );
+                      menuList.addAll(
+                        orderTypes
+                            .map(
+                              (e) => PopupMenuItem(
+                                value: sortTypes.length + orderTypes.indexOf(e),
+                                child: Row(
+                                  children: [
+                                    if (orderValue == orderTypes.indexOf(e))
+                                      Icon(
+                                        Icons.check_rounded,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white
+                                            : Colors.grey[700],
+                                      )
+                                    else
+                                      const SizedBox(),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      e,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      );
+                      return menuList;
+                    },
+                  ),
                 ],
                 centerTitle: true,
                 backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -199,8 +237,8 @@ class _SongsListState extends State<SongsList> {
                   ? SizedBox(
                       child: Center(
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.width / 7,
-                          width: MediaQuery.of(context).size.width / 7,
+                          height: MediaQuery.of(context).size.width / 8,
+                          width: MediaQuery.of(context).size.width / 8,
                           child: const CircularProgressIndicator(),
                         ),
                       ),
@@ -294,7 +332,7 @@ class _SongsListState extends State<SongsList> {
                     ),
             ),
           ),
-          MiniPlayer(),
+          const MiniPlayer(),
         ],
       ),
     );

@@ -1,5 +1,25 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'package:blackhole/Helpers/config.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 
 class GradientContainer extends StatefulWidget {
   final Widget? child;
@@ -10,6 +30,7 @@ class GradientContainer extends StatefulWidget {
 }
 
 class _GradientContainerState extends State<GradientContainer> {
+  MyTheme currentTheme = GetIt.I<MyTheme>();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -49,6 +70,7 @@ class BottomGradientContainer extends StatefulWidget {
 }
 
 class _BottomGradientContainerState extends State<BottomGradientContainer> {
+  MyTheme currentTheme = GetIt.I<MyTheme>();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -75,12 +97,10 @@ class _BottomGradientContainerState extends State<BottomGradientContainer> {
 
 class GradientCard extends StatefulWidget {
   final Widget child;
-  final bool? miniplayer;
-  final double? radius;
+  final BorderRadius? radius;
   final double? elevation;
   const GradientCard({
     required this.child,
-    this.miniplayer,
     this.radius,
     this.elevation,
   });
@@ -89,12 +109,13 @@ class GradientCard extends StatefulWidget {
 }
 
 class _GradientCardState extends State<GradientCard> {
+  MyTheme currentTheme = GetIt.I<MyTheme>();
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: widget.elevation ?? 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(widget.radius ?? 10.0),
+        borderRadius: widget.radius ?? BorderRadius.circular(10.0),
       ),
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
@@ -104,9 +125,7 @@ class _GradientCardState extends State<GradientCard> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: Theme.of(context).brightness == Brightness.dark
-                ? currentTheme.getCardGradient(
-                    miniplayer: widget.miniplayer ?? false,
-                  )
+                ? currentTheme.getCardGradient()
                 : [
                     Colors.white,
                     Theme.of(context).canvasColor,

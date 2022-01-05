@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -17,7 +36,6 @@ class SaavnAPI {
   Map<String, String> endpoints = {
     'homeData': '__call=webapi.getLaunchData',
     'topSearches': '__call=content.getTopSearches',
-    'getResult': '__call=search.getResults',
     'fromToken': '__call=webapi.get',
     'featuredRadio': '__call=webradio.createFeaturedStation',
     'artistRadio': '__call=webradio.createArtistStation',
@@ -166,9 +184,13 @@ class SaavnAPI {
     return List.empty();
   }
 
-  Future<List> fetchSongSearchResults(String searchQuery, String count) async {
+  Future<List> fetchSongSearchResults({
+    required String searchQuery,
+    int count = 20,
+    int page = 1,
+  }) async {
     final String params =
-        "p=1&q=$searchQuery&n=$count&${endpoints['getResult']}";
+        "p=$page&q=$searchQuery&n=$count&${endpoints['getResults']}";
 
     try {
       final res = await getResponse(params, useProxy: true);
@@ -287,16 +309,22 @@ class SaavnAPI {
     return [result, position];
   }
 
-  Future<List<Map>> fetchAlbums(String searchQuery, String type) async {
+  Future<List<Map>> fetchAlbums({
+    required String searchQuery,
+    required String type,
+    int count = 20,
+    int page = 1,
+  }) async {
     String? params;
     if (type == 'playlist') {
-      params = 'p=1&q=$searchQuery&n=20&${endpoints["playlistResults"]}';
+      params =
+          'p=$page&q=$searchQuery&n=$count&${endpoints["playlistResults"]}';
     }
     if (type == 'album') {
-      params = 'p=1&q=$searchQuery&n=20&${endpoints["albumResults"]}';
+      params = 'p=$page&q=$searchQuery&n=$count&${endpoints["albumResults"]}';
     }
     if (type == 'artist') {
-      params = 'p=1&q=$searchQuery&n=20&${endpoints["artistResults"]}';
+      params = 'p=$page&q=$searchQuery&n=$count&${endpoints["artistResults"]}';
     }
 
     final res = await getResponse(params!);
@@ -319,27 +347,26 @@ class SaavnAPI {
     return List.empty();
   }
 
-  Future<Map<String, List>> fetchArtistSongs(String artistToken) async {
+  Future<Map<String, List>> fetchArtistSongs({
+    required String artistToken,
+    String category = '',
+    String sortOrder = '',
+  }) async {
     final Map<String, List> data = {};
     final String params =
-        '${endpoints["fromToken"]}&type=artist&p=&n_song=50&n_album=50&sub_type=&category=&sort_order=&includeMetaTags=0&token=$artistToken';
+        '${endpoints["fromToken"]}&type=artist&p=&n_song=50&n_album=50&sub_type=&category=$category&sort_order=$sortOrder&includeMetaTags=0&token=$artistToken';
     final res = await getResponse(params);
     if (res.statusCode == 200) {
-      final getMain = json.decode(res.body);
+      final getMain = json.decode(res.body) as Map;
       final List topSongsResponseList = getMain['topSongs'] as List;
+      final List latestReleaseResponseList = getMain['latest_release'] as List;
       final List topAlbumsResponseList = getMain['topAlbums'] as List;
-      // List singlesResponseList = getMain["singles"];
-      // List latestReleaseResponseList = getMain["latest_release"];
-      // List dedicatedArtistPlaylistResponseList = [];
-      // if (getMain["dedicated_artist_playlist"] is List) {
-      //   dedicatedArtistPlaylistResponseList =
-      //       getMain["dedicated_artist_playlist"];
-      // }
-      // List featuredArtistPlaylistResponseList = [];
-      // if (getMain["featured_artist_playlist"] is List) {
-      //   featuredArtistPlaylistResponseList =
-      //       getMain["featured_artist_playlist"];
-      // }
+      final List singlesResponseList = getMain['singles'] as List;
+      final List dedicatedResponseList =
+          getMain['dedicated_artist_playlist'] as List;
+      final List featuredResponseList =
+          getMain['featured_artist_playlist'] as List;
+      final List similarArtistsResponseList = getMain['similarArtists'] as List;
 
       final List topSongsSearchedList =
           await FormatResponse.formatSongsResponse(
@@ -347,7 +374,17 @@ class SaavnAPI {
         'song',
       );
       if (topSongsSearchedList.isNotEmpty) {
-        data['Top Songs'] = topSongsSearchedList;
+        data[getMain['modules']?['topSongs']?['title']?.toString() ??
+            'Top Songs'] = topSongsSearchedList;
+      }
+
+      final List latestReleaseSearchedList =
+          await FormatResponse.formatArtistTopAlbumsResponse(
+        latestReleaseResponseList,
+      );
+      if (latestReleaseSearchedList.isNotEmpty) {
+        data[getMain['modules']?['latest_release']?['title']?.toString() ??
+            'Latest Releases'] = latestReleaseSearchedList;
       }
 
       final List topAlbumsSearchedList =
@@ -355,29 +392,47 @@ class SaavnAPI {
         topAlbumsResponseList,
       );
       if (topAlbumsSearchedList.isNotEmpty) {
-        data['Top Albums'] = topAlbumsSearchedList;
+        data[getMain['modules']?['topAlbums']?['title']?.toString() ??
+            'Top Albums'] = topAlbumsSearchedList;
       }
 
-      // List latestReleaseSearchedList = await FormatResponse()
-      // .formatSongsResponse(latestReleaseResponseList, 'songs');
-      // if (latestReleaseSearchedList.isNotEmpty)
-      // data['Latest Release'] = latestReleaseSearchedList;
+      final List singlesSearchedList =
+          await FormatResponse.formatArtistTopAlbumsResponse(
+        singlesResponseList,
+      );
+      if (singlesSearchedList.isNotEmpty) {
+        data[getMain['modules']?['singles']?['title']?.toString() ??
+            'Singles'] = singlesSearchedList;
+      }
 
-      // List singlesSearchedList = await FormatResponse()
-      // .formatSongsResponse(singlesResponseList, 'songs');
-      // if (singlesSearchedList.isNotEmpty) data['Singles'] = singlesSearchedList;
+      final List dedicatedSearchedList =
+          await FormatResponse.formatArtistTopAlbumsResponse(
+        dedicatedResponseList,
+      );
+      if (dedicatedSearchedList.isNotEmpty) {
+        data[getMain['modules']?['dedicated_artist_playlist']?['title']
+                ?.toString() ??
+            'Dedicated Playlists'] = dedicatedSearchedList;
+      }
 
-      // List dedicatedArtistPlaylistSearchedList = await FormatResponse()
-      //     .formatArtistDedicatedArtistPlaylistResponse(
-      //         dedicatedArtistPlaylistResponseList);
-      // if (dedicatedArtistPlaylistSearchedList.isNotEmpty)
-      //   data['Dedicated Artist Playlist'] = dedicatedArtistPlaylistSearchedList;
+      final List featuredSearchedList =
+          await FormatResponse.formatArtistTopAlbumsResponse(
+        featuredResponseList,
+      );
+      if (featuredSearchedList.isNotEmpty) {
+        data[getMain['modules']?['featured_artist_playlist']?['title']
+                ?.toString() ??
+            'Featured Playlists'] = featuredSearchedList;
+      }
 
-      // List featuredArtistPlaylistSearchedList = await FormatResponse()
-      //     .formatArtistFeaturedArtistPlaylistResponse(
-      //         featuredArtistPlaylistResponseList);
-      // if (featuredArtistPlaylistSearchedList.isNotEmpty)
-      //   data['Featured Artist Playlist'] = featuredArtistPlaylistSearchedList;
+      final List similarArtistsSearchedList =
+          await FormatResponse.formatSimilarArtistsResponse(
+        similarArtistsResponseList,
+      );
+      if (similarArtistsSearchedList.isNotEmpty) {
+        data[getMain['modules']?['similarArtists']?['title']?.toString() ??
+            'Similar Artists'] = similarArtistsSearchedList;
+      }
     }
     return data;
   }

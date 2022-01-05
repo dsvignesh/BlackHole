@@ -1,21 +1,42 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
-import 'package:blackhole/main.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:hive/hive.dart';
+import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class MiniPlayer extends StatefulWidget {
+  const MiniPlayer({Key? key}) : super(key: key);
+
   @override
   _MiniPlayerState createState() => _MiniPlayerState();
 }
 
 class _MiniPlayerState extends State<MiniPlayer> {
+  AudioPlayerHandler audioHandler = GetIt.I<AudioPlayerHandler>();
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<PlaybackState>(
@@ -68,18 +89,21 @@ class _MiniPlayerState extends State<MiniPlayer> {
                                     overlayRadius: 2.0,
                                   ),
                                 ),
-                                child: Slider(
-                                  inactiveColor: Colors.transparent,
-                                  // activeColor: Colors.white,
-                                  value: position.inSeconds.toDouble(),
-                                  max: mediaItem.duration!.inSeconds.toDouble(),
-                                  onChanged: (newPosition) {
-                                    audioHandler.seek(
-                                      Duration(
-                                        seconds: newPosition.round(),
-                                      ),
-                                    );
-                                  },
+                                child: Center(
+                                  child: Slider(
+                                    inactiveColor: Colors.transparent,
+                                    // activeColor: Colors.white,
+                                    value: position.inSeconds.toDouble(),
+                                    max: mediaItem.duration!.inSeconds
+                                        .toDouble(),
+                                    onChanged: (newPosition) {
+                                      audioHandler.seek(
+                                        Duration(
+                                          seconds: newPosition.round(),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               );
                   },
@@ -94,102 +118,111 @@ class _MiniPlayerState extends State<MiniPlayer> {
                     defaultValue: ['Previous', 'Play/Pause', 'Next'],
                   )?.toList() as List;
 
-                  return SizedBox(
-                    height: useDense ? 68.0 : 76.0,
-                    child: GradientCard(
-                      miniplayer: true,
-                      radius: 0.0,
-                      elevation: 0.0,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            dense: useDense,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  pageBuilder: (_, __, ___) => const PlayScreen(
-                                    songsList: [],
-                                    index: 1,
-                                    offline: null,
-                                    fromMiniplayer: true,
-                                    fromDownloads: false,
-                                    recommend: false,
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 2.0,
+                      vertical: 1.0,
+                    ),
+                    child: SizedBox(
+                      height: useDense ? 68.0 : 76.0,
+                      child: GradientContainer(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              dense: useDense,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  PageRouteBuilder(
+                                    opaque: false,
+                                    pageBuilder: (_, __, ___) =>
+                                        const PlayScreen(
+                                      songsList: [],
+                                      index: 1,
+                                      offline: null,
+                                      fromMiniplayer: true,
+                                      fromDownloads: false,
+                                      recommend: false,
+                                    ),
                                   ),
+                                );
+                              },
+                              title: Text(
+                                mediaItem.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                mediaItem.artist ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              leading: Hero(
+                                tag: 'currentArtwork',
+                                child: Card(
+                                  elevation: 8,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(7.0),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: (mediaItem.artUri
+                                          .toString()
+                                          .startsWith('file:'))
+                                      ? SizedBox.square(
+                                          dimension: useDense ? 40.0 : 40.0,
+                                          child: Image(
+                                            fit: BoxFit.cover,
+                                            image: FileImage(
+                                              File(
+                                                mediaItem.artUri!.toFilePath(),
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      : SizedBox.square(
+                                          dimension: useDense ? 40.0 : 50.0,
+                                          child: CachedNetworkImage(
+                                            fit: BoxFit.cover,
+                                            errorWidget: (
+                                              BuildContext context,
+                                              _,
+                                              __,
+                                            ) =>
+                                                const Image(
+                                              fit: BoxFit.cover,
+                                              image: AssetImage(
+                                                'assets/cover.jpg',
+                                              ),
+                                            ),
+                                            placeholder: (
+                                              BuildContext context,
+                                              _,
+                                            ) =>
+                                                const Image(
+                                              fit: BoxFit.cover,
+                                              image: AssetImage(
+                                                'assets/cover.jpg',
+                                              ),
+                                            ),
+                                            imageUrl:
+                                                mediaItem.artUri.toString(),
+                                          ),
+                                        ),
                                 ),
-                              );
-                            },
-                            title: Text(
-                              mediaItem.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              mediaItem.artist ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            leading: Hero(
-                              tag: 'currentArtwork',
-                              child: Card(
-                                elevation: 8,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(7.0),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: (mediaItem.artUri
+                              ),
+                              trailing: ControlButtons(
+                                audioHandler,
+                                miniplayer: true,
+                                buttons: mediaItem.artUri
                                         .toString()
-                                        .startsWith('file:'))
-                                    ? SizedBox.square(
-                                        dimension: useDense ? 40.0 : 50.0,
-                                        child: Image(
-                                          fit: BoxFit.cover,
-                                          image: FileImage(
-                                            File(
-                                              mediaItem.artUri!.toFilePath(),
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    : SizedBox.square(
-                                        dimension: useDense ? 40.0 : 50.0,
-                                        child: CachedNetworkImage(
-                                          fit: BoxFit.cover,
-                                          errorWidget: (
-                                            BuildContext context,
-                                            _,
-                                            __,
-                                          ) =>
-                                              const Image(
-                                            fit: BoxFit.cover,
-                                            image: AssetImage(
-                                              'assets/cover.jpg',
-                                            ),
-                                          ),
-                                          placeholder: (
-                                            BuildContext context,
-                                            _,
-                                          ) =>
-                                              const Image(
-                                            fit: BoxFit.cover,
-                                            image: AssetImage(
-                                              'assets/cover.jpg',
-                                            ),
-                                          ),
-                                          imageUrl: mediaItem.artUri.toString(),
-                                        ),
-                                      ),
+                                        .startsWith('file:')
+                                    ? ['Previous', 'Play/Pause', 'Next']
+                                    : preferredMiniButtons,
                               ),
                             ),
-                            trailing: ControlButtons(
-                              audioHandler,
-                              miniplayer: true,
-                              buttons: preferredMiniButtons,
-                            ),
-                          ),
-                          child!,
-                        ],
+                            child!,
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -202,5 +235,3 @@ class _MiniPlayerState extends State<MiniPlayer> {
     );
   }
 }
-
-MiniPlayer miniPlayer = MiniPlayer();

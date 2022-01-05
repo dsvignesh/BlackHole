@@ -1,29 +1,44 @@
-<img width="125px" src="https://github.com/Sangwan5688/BlackHole/blob/main/assets/icon-white-trans.png" align="center" />
+![Repo Banner](https://user-images.githubusercontent.com/87353286/144381080-faf8e557-7909-43a1-a8e2-208936e5a8f8.png)
+
+
 
 # BlackHole
 
-Awesome Music Player made with Flutter!
+An Open-Source Music Player App for all your needs!
 
 [![made-with-flutter](https://img.shields.io/badge/Made%20with-Flutter-1f425f.svg)](https://flutter.dev/) ![Release](https://img.shields.io/github/v/release/Sangwan5688/BlackHole) ![Downloads](https://img.shields.io/github/downloads/Sangwan5688/BlackHole/total)
-[![CI](https://github.com/Sangwan5688/BlackHole/actions/workflows/flutter.yml/badge.svg)](https://github.com/Sangwan5688/BlackHole/actions/workflows/flutter.yml)
+[![Build](https://github.com/Sangwan5688/BlackHole/actions/workflows/flutter.yml/badge.svg)](https://github.com/Sangwan5688/BlackHole/actions/workflows/flutter.yml)
+[![Translation-Status](https://hosted.weblate.org/widgets/blackhole/-/translations/svg-badge.svg)](https://hosted.weblate.org/engage/blackhole/)
 
 ### Dont forget to :star: the repo
 
 [![GitHub stars](https://img.shields.io/github/stars/Sangwan5688/BlackHole.svg?style=social&label=Star)](https://github.com//Sangwan5688/BlackHole) ![GitHub forks](https://img.shields.io/github/forks/Sangwan5688/BlackHole.svg?style=social&label=Forks) ![GitHub followers](https://img.shields.io/github/followers/Sangwan5688.svg?style=social&label=Follow)
 
 ## Download
+
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png"
+     alt="Get it on IzzyDroid"
+     height="100">](https://android.izzysoft.de/repo/apk/com.shadow.blackhole)
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.shadow.blackhole/)
+     height="100">](https://f-droid.org/packages/com.shadow.blackhole/)
 
-Or [Download from Github](https://github.com/Sangwan5688/BlackHole/releases)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[<img src="https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white"
+     alt="Download from GitHub"
+     height="60">](https://github.com/Sangwan5688/BlackHole/releases)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[<img src="https://img.shields.io/badge/Telegram-2CA5E0?logo=telegram&logoColor=white"
+     alt="Join Telegram Channel"
+     height="60">](https://t.me/blackhole_official)
 
 ## Translations
 
 - [Spanish :es:](/README.ES.md)
 - [Russian :ru:](/README.RU.md)
+- [French :fr:](/README.FR.md)
 
-Thanks to [Euri](https://github.com/EuriNaiz) and [Nikita](https://github.com/TireX228) for translations
+[Translate App on Weblate](https://hosted.weblate.org/projects/blackhole/translations/)
 
 ## Features
 
@@ -71,15 +86,27 @@ Check it yourself :)
 ```
 Copyright © 2021 Ankit Sangwan
 
-BlackHole is free software licensed under GPL v3.0.
-You can redistribute and/or modify it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-BlackHole is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+BlackHole is a free software licensed under GPL v3.0
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU General Public License for more details.
 ```
-[View License](https://github.com/Sangwan5688/BlackHole/blob/main/LICENSE)
+```
+Being Open Source doesn't mean you can just make a copy of the app and upload it on playstore or sell
+a closed source copy of the same.
+Read the following carefully:
+1. Any copy of a software under GPL must be under same license. So you can't upload the app on a closed source
+  app repository like PlayStore/AppStore without distributing the source code.
+2. You can't sell any copied/modified version of the app under any "non-free" license.
+   You must provide the copy with the original software or with instructions on how to obtain original software,
+   should clearly state all changes, should clearly disclose full source code, should include same license
+   and all copyrights should be retained.
+
+In simple words, You can ONLY use the source code of this app for `Open Source` Project under `GPL v3.0` or later
+with all your source code CLEARLY DISCLOSED on any open source platform like GitHub, with clear INSTRUCTIONS on
+how to obtain the original software, should clearly STATE ALL CHANGES made and should RETAIN all copyrights.
+Use of this software under any "non-free" license is NOT permitted.
+```
+See the [GNU General Public License](https://github.com/Sangwan5688/BlackHole/blob/main/LICENSE) for more details.
 
 ## Building from Source
 

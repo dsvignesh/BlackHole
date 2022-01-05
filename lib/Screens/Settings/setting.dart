@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:io';
 
 import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
@@ -14,11 +33,11 @@ import 'package:blackhole/Screens/Home/saavn.dart' as home_screen;
 import 'package:blackhole/Screens/Top Charts/top.dart' as top_screen;
 import 'package:blackhole/Services/ext_storage_provider.dart';
 import 'package:blackhole/main.dart';
+import 'package:device_info/device_info.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:hive/hive.dart';
+import 'package:get_it/get_it.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:package_info/package_info.dart';
@@ -34,11 +53,15 @@ class SettingPage extends StatefulWidget {
 
 class _SettingPageState extends State<SettingPage> {
   String? appVersion;
-  Box settingsBox = Hive.box('settings');
+  final Box settingsBox = Hive.box('settings');
+  final MyTheme currentTheme = GetIt.I<MyTheme>();
   String downloadPath = Hive.box('settings')
       .get('downloadPath', defaultValue: '/storage/emulated/0/Music') as String;
-  // List dirPaths =
-  // Hive.box('settings').get('blacklistedPaths', defaultValue: []) as List;
+  final ValueNotifier<bool> includeOrExclude = ValueNotifier<bool>(
+    Hive.box('settings').get('includeOrExclude', defaultValue: false) as bool,
+  );
+  List includedExcludedPaths = Hive.box('settings')
+      .get('includedExcludedPaths', defaultValue: []) as List;
   List blacklistedHomeSections = Hive.box('settings')
       .get('blacklistedHomeSections', defaultValue: []) as List;
   String streamingQuality = Hive.box('settings')
@@ -50,7 +73,7 @@ class _SettingPageState extends State<SettingPage> {
   String canvasColor =
       Hive.box('settings').get('canvasColor', defaultValue: 'Grey') as String;
   String cardColor =
-      Hive.box('settings').get('cardColor', defaultValue: 'Grey850') as String;
+      Hive.box('settings').get('cardColor', defaultValue: 'Grey900') as String;
   String theme =
       Hive.box('settings').get('theme', defaultValue: 'Default') as String;
   Map userThemes =
@@ -62,6 +85,8 @@ class _SettingPageState extends State<SettingPage> {
   String themeColor =
       Hive.box('settings').get('themeColor', defaultValue: 'Teal') as String;
   int colorHue = Hive.box('settings').get('colorHue', defaultValue: 400) as int;
+  int downFilename =
+      Hive.box('settings').get('downFilename', defaultValue: 0) as int;
   List<String> languages = [
     'Hindi',
     'English',
@@ -80,13 +105,10 @@ class _SettingPageState extends State<SettingPage> {
     'Odia',
     'Assamese'
   ];
-  List<String> miniButtons = [
-    'Like',
-    'Previous',
-    'Play/Pause',
-    'Next',
-    'Download'
-  ];
+  List miniButtonsOrder = Hive.box('settings').get(
+    'miniButtonsOrder',
+    defaultValue: ['Like', 'Previous', 'Play/Pause', 'Next', 'Download'],
+  ) as List;
   List preferredLanguage = Hive.box('settings')
       .get('preferredLanguage', defaultValue: ['Hindi'])?.toList() as List;
   List preferredMiniButtons = Hive.box('settings').get(
@@ -944,32 +966,32 @@ class _SettingPageState extends State<SettingPage> {
                                     settingsBox.put(
                                       'backGrad',
                                       themeChoice == deflt
-                                          ? 1
+                                          ? 2
                                           : selectedTheme['backGrad'],
                                     );
                                     currentTheme.backGrad = themeChoice == deflt
-                                        ? 1
+                                        ? 2
                                         : selectedTheme['backGrad'] as int;
 
                                     settingsBox.put(
                                       'cardGrad',
                                       themeChoice == deflt
-                                          ? 3
+                                          ? 4
                                           : selectedTheme['cardGrad'],
                                     );
                                     currentTheme.cardGrad = themeChoice == deflt
-                                        ? 3
+                                        ? 4
                                         : selectedTheme['cardGrad'] as int;
 
                                     settingsBox.put(
                                       'bottomGrad',
                                       themeChoice == deflt
-                                          ? 2
+                                          ? 3
                                           : selectedTheme['bottomGrad'],
                                     );
                                     currentTheme.bottomGrad = themeChoice ==
                                             deflt
-                                        ? 2
+                                        ? 3
                                         : selectedTheme['bottomGrad'] as int;
 
                                     currentTheme.switchCanvasColor(
@@ -986,13 +1008,13 @@ class _SettingPageState extends State<SettingPage> {
 
                                     currentTheme.switchCardColor(
                                       themeChoice == deflt
-                                          ? 'Grey850'
+                                          ? 'Grey900'
                                           : selectedTheme['cardColor']
                                               as String,
                                       notify: false,
                                     );
                                     cardColor = themeChoice == deflt
-                                        ? 'Grey850'
+                                        ? 'Grey900'
                                         : selectedTheme['cardColor'] as String;
 
                                     themeColor = themeChoice == deflt
@@ -1257,6 +1279,24 @@ class _SettingPageState extends State<SettingPage> {
                             AppLocalizations.of(
                               context,
                             )!
+                                .useDominantFullScreen,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .useDominantFullScreenSub,
+                          ),
+                          keyName: 'useFullScreenGradient',
+                          defaultValue: false,
+                          isThreeLine: false,
+                        ),
+
+                        BoxSwitchTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
                                 .useDenseMini,
                           ),
                           subtitle: Text(
@@ -1289,6 +1329,8 @@ class _SettingPageState extends State<SettingPage> {
                               builder: (BuildContext context) {
                                 final List checked =
                                     List.from(preferredMiniButtons);
+                                final List<String> order =
+                                    List.from(miniButtonsOrder);
                                 return StatefulBuilder(
                                   builder: (
                                     BuildContext context,
@@ -1317,17 +1359,26 @@ class _SettingPageState extends State<SettingPage> {
                                             if (oldIndex < newIndex) {
                                               newIndex--;
                                             }
-                                            final temp = checked.removeAt(
+                                            final temp = order.removeAt(
                                               oldIndex,
                                             );
-                                            checked.insert(newIndex, temp);
+                                            order.insert(newIndex, temp);
                                             setStt(
                                               () {},
                                             );
                                           },
-                                          children: miniButtons.map((e) {
+                                          header: Center(
+                                            child: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!
+                                                  .changeOrder,
+                                            ),
+                                          ),
+                                          children: order.map((e) {
                                             return CheckboxListTile(
                                               key: Key(e),
+                                              dense: true,
                                               activeColor: Theme.of(context)
                                                   .colorScheme
                                                   .secondary,
@@ -1386,11 +1437,25 @@ class _SettingPageState extends State<SettingPage> {
                                           onPressed: () {
                                             setState(
                                               () {
-                                                preferredMiniButtons = checked;
+                                                final List temp = [];
+                                                for (int i = 0;
+                                                    i < order.length;
+                                                    i++) {
+                                                  if (checked
+                                                      .contains(order[i])) {
+                                                    temp.add(order[i]);
+                                                  }
+                                                }
+                                                preferredMiniButtons = temp;
+                                                miniButtonsOrder = order;
                                                 Navigator.pop(context);
                                                 Hive.box('settings').put(
                                                   'preferredMiniButtons',
                                                   preferredMiniButtons,
+                                                );
+                                                Hive.box('settings').put(
+                                                  'miniButtonsOrder',
+                                                  order,
                                                 );
                                               },
                                             );
@@ -1586,6 +1651,7 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                           keyName: 'enableGesture',
                           defaultValue: true,
+                          isThreeLine: true,
                         ),
                       ],
                     ),
@@ -1905,6 +1971,7 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                           keyName: 'autoplay',
                           defaultValue: true,
+                          isThreeLine: true,
                         ),
                         // BoxSwitchTile(
                         //   title: Text(
@@ -1922,97 +1989,6 @@ class _SettingPageState extends State<SettingPage> {
                         //   keyName: 'cacheSong',
                         //   defaultValue: false,
                         // ),
-                        //     ListTile(
-                        //         title: const Text('BlackList Location'),
-                        //         subtitle: const Text(
-                        //             'Locations blacklisted from "My Music" section'),
-                        //         dense: true,
-                        //         onTap: () {
-                        //           final GlobalKey<AnimatedListState> _listKey =
-                        //               GlobalKey<AnimatedListState>();
-                        //           showModalBottomSheet(
-                        //               isDismissible: true,
-                        //               backgroundColor: Colors.transparent,
-                        //               context: context,
-                        //               builder: (BuildContext context) {
-                        //                 return BottomGradientContainer(
-                        //                   borderRadius: BorderRadius.circular(20.0,),
-                        //                   child: AnimatedList(
-                        //                     physics: const BouncingScrollPhysics(),
-                        //                     shrinkWrap: true,
-                        //                     padding: const EdgeInsets.fromLTRB(
-                        //                         0, 10, 0, 10,),
-                        //                     key: _listKey,
-                        //                     initialItemCount: dirPaths.length + 1,
-                        //                     itemBuilder: (cntxt, idx, animation) {
-                        //                       return (idx == 0)
-                        //                           ? ListTile(
-                        //                               title:
-                        //                                   const Text('Add Location'),
-                        //                               leading: const Icon(
-                        //                                   CupertinoIcons.add,),
-                        //                               onTap: () async {
-                        //                                 final String temp =
-                        //                                     await Picker()
-                        //                                         .selectFolder(context,
-                        //                                             'Select Folder');
-                        //                                 if (temp.trim() != '' &&
-                        //                                     !dirPaths
-                        //                                         .contains(temp)) {
-                        //                                   dirPaths.add(temp);
-                        //                                   Hive.box('settings').put(
-                        //                                       'blacklistedPaths',
-                        //                                       dirPaths);
-                        //                                   _listKey.currentState!
-                        //                                       .insertItem(
-                        //                                           dirPaths.length);
-                        //                                 } else {
-                        //                                   if (temp.trim() == '') {
-                        //                                     Navigator.pop(context);
-                        //                                   }
-                        //                                   ShowSnackBar().showSnackBar(
-                        //                                     context,
-                        //                                     temp.trim() == ''
-                        //                                         ? 'No folder selected'
-                        //                                         : 'Already added',
-                        //                                   );
-                        //                                 }
-                        //                               },
-                        //                             )
-                        //                           : SizeTransition(
-                        //                               sizeFactor: animation,
-                        //                               child: ListTile(
-                        //                                 leading: const Icon(
-                        //                                     CupertinoIcons.folder,),
-                        //                                 title: Text(dirPaths[idx - 1]
-                        //                                     .toString(),),
-                        //                                 trailing: IconButton(
-                        //                                   icon: const Icon(
-                        //                                     CupertinoIcons.clear,
-                        //                                     size: 15.0,
-                        //                                   ),
-                        //                                   tooltip: 'Remove',
-                        //                                   onPressed: () {
-                        //                                     dirPaths
-                        //                                         .removeAt(idx - 1);
-                        //                                     Hive.box('settings').put(
-                        //                                         'blacklistedPaths',
-                        //                                         dirPaths);
-                        //                                     _listKey.currentState!
-                        //                                         .removeItem(
-                        //                                             idx,
-                        //                                             (context,
-                        //                                                     animation) =>
-                        //                                                 Container());
-                        //                                   },
-                        //                                 ),
-                        //                               ),
-                        //                             );
-                        //                     },
-                        //                   ),
-                        //                 );
-                        //               },);
-                        //         })
                       ],
                     ),
                   ),
@@ -2128,8 +2104,8 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                           onTap: () async {
                             final String temp = await Picker.selectFolder(
-                              context,
-                              AppLocalizations.of(
+                              context: context,
+                              message: AppLocalizations.of(
                                 context,
                               )!
                                   .selectDownLocation,
@@ -2151,6 +2127,75 @@ class _SettingPageState extends State<SettingPage> {
                             }
                           },
                           dense: true,
+                        ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downFilename,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .downFilenameSub,
+                          ),
+                          dense: true,
+                          onTap: () {
+                            showModalBottomSheet(
+                              isDismissible: true,
+                              backgroundColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                return BottomGradientContainer(
+                                  borderRadius: BorderRadius.circular(
+                                    20.0,
+                                  ),
+                                  child: ListView(
+                                    physics: const BouncingScrollPhysics(),
+                                    shrinkWrap: true,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      0,
+                                      10,
+                                      0,
+                                      10,
+                                    ),
+                                    children: [
+                                      CheckboxListTile(
+                                        title: Text(
+                                          '${AppLocalizations.of(context)!.title} - ${AppLocalizations.of(context)!.artist}',
+                                        ),
+                                        value: downFilename == 0,
+                                        selected: downFilename == 0,
+                                        onChanged: (bool? val) {
+                                          if (val ?? false) {
+                                            downFilename = 0;
+                                            settingsBox.put('downFilename', 0);
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                      CheckboxListTile(
+                                        title: Text(
+                                          '${AppLocalizations.of(context)!.artist} - ${AppLocalizations.of(context)!.title}',
+                                        ),
+                                        value: downFilename == 1,
+                                        selected: downFilename == 1,
+                                        onChanged: (val) {
+                                          if (val ?? false) {
+                                            downFilename = 1;
+                                            settingsBox.put('downFilename', 1);
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                         BoxSwitchTile(
                           title: Text(
@@ -2262,9 +2307,13 @@ class _SettingPageState extends State<SettingPage> {
                             onChanged: (String? newValue) {
                               final Map<String, String> codes = {
                                 'English': 'en',
-                                'Russian': 'ru',
+                                'French': 'fr',
+                                'German': 'de',
+                                'Indonesian': 'id',
                                 'Portuguese': 'pt',
-                                'Indonesia': 'id',
+                                'Russian': 'ru',
+                                'Spanish': 'es',
+                                'Tamil': 'ta',
                               };
                               if (newValue != null) {
                                 setState(
@@ -2282,9 +2331,13 @@ class _SettingPageState extends State<SettingPage> {
                             },
                             items: <String>[
                               'English',
-                              'Russian',
+                              'French',
+                              'German',
+                              'Indonesian',
                               'Portuguese',
-                              'Indonesia',
+                              'Russian',
+                              'Spanish',
+                              'Tamil'
                             ].map<DropdownMenuItem<String>>((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
@@ -2296,7 +2349,240 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                           dense: true,
                         ),
+                        ListTile(
+                          title: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .includeExcludeFolder,
+                          ),
+                          subtitle: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!
+                                .includeExcludeFolderSub,
+                          ),
+                          dense: true,
+                          onTap: () {
+                            final GlobalKey<AnimatedListState> _listKey =
+                                GlobalKey<AnimatedListState>();
+                            showModalBottomSheet(
+                              isDismissible: true,
+                              backgroundColor: Colors.transparent,
+                              context: context,
+                              builder: (BuildContext context) {
+                                return BottomGradientContainer(
+                                  borderRadius: BorderRadius.circular(
+                                    20.0,
+                                  ),
+                                  child: AnimatedList(
+                                    physics: const BouncingScrollPhysics(),
+                                    shrinkWrap: true,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      0,
+                                      10,
+                                      0,
+                                      10,
+                                    ),
+                                    key: _listKey,
+                                    initialItemCount:
+                                        includedExcludedPaths.length + 2,
+                                    itemBuilder: (cntxt, idx, animation) {
+                                      if (idx == 0) {
+                                        return ValueListenableBuilder(
+                                          valueListenable: includeOrExclude,
+                                          builder: (
+                                            BuildContext context,
+                                            bool value,
+                                            Widget? widget,
+                                          ) {
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: <Widget>[
+                                                    ChoiceChip(
+                                                      label: Text(
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        )!
+                                                            .excluded,
+                                                      ),
+                                                      selectedColor:
+                                                          Theme.of(context)
+                                                              .colorScheme
+                                                              .secondary
+                                                              .withOpacity(0.2),
+                                                      labelStyle: TextStyle(
+                                                        color: !value
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .secondary
+                                                            : Theme.of(context)
+                                                                .textTheme
+                                                                .bodyText1!
+                                                                .color,
+                                                        fontWeight: !value
+                                                            ? FontWeight.w600
+                                                            : FontWeight.normal,
+                                                      ),
+                                                      selected: !value,
+                                                      onSelected:
+                                                          (bool selected) {
+                                                        includeOrExclude.value =
+                                                            !selected;
+                                                        settingsBox.put(
+                                                          'includeOrExclude',
+                                                          !selected,
+                                                        );
+                                                      },
+                                                    ),
+                                                    const SizedBox(
+                                                      width: 5,
+                                                    ),
+                                                    ChoiceChip(
+                                                      label: Text(
+                                                        AppLocalizations.of(
+                                                          context,
+                                                        )!
+                                                            .included,
+                                                      ),
+                                                      selectedColor:
+                                                          Theme.of(context)
+                                                              .colorScheme
+                                                              .secondary
+                                                              .withOpacity(0.2),
+                                                      labelStyle: TextStyle(
+                                                        color: value
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .secondary
+                                                            : Theme.of(context)
+                                                                .textTheme
+                                                                .bodyText1!
+                                                                .color,
+                                                        fontWeight: value
+                                                            ? FontWeight.w600
+                                                            : FontWeight.normal,
+                                                      ),
+                                                      selected: value,
+                                                      onSelected:
+                                                          (bool selected) {
+                                                        includeOrExclude.value =
+                                                            selected;
+                                                        settingsBox.put(
+                                                          'includeOrExclude',
+                                                          selected,
+                                                        );
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                    left: 5.0,
+                                                    top: 5.0,
+                                                    bottom: 10.0,
+                                                  ),
+                                                  child: Text(
+                                                    value
+                                                        ? AppLocalizations.of(
+                                                            context,
+                                                          )!
+                                                            .includedDetails
+                                                        : AppLocalizations.of(
+                                                            context,
+                                                          )!
+                                                            .excludedDetails,
+                                                    textAlign: TextAlign.start,
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      }
+                                      if (idx == 1) {
+                                        return ListTile(
+                                          title: Text(
+                                            AppLocalizations.of(context)!
+                                                .addNew,
+                                          ),
+                                          leading: const Icon(
+                                            CupertinoIcons.add,
+                                          ),
+                                          onTap: () async {
+                                            final String temp =
+                                                await Picker.selectFolder(
+                                              context: context,
+                                            );
+                                            if (temp.trim() != '' &&
+                                                !includedExcludedPaths
+                                                    .contains(temp)) {
+                                              includedExcludedPaths.add(temp);
+                                              Hive.box('settings').put(
+                                                'includedExcludedPaths',
+                                                includedExcludedPaths,
+                                              );
+                                              _listKey.currentState!.insertItem(
+                                                includedExcludedPaths.length,
+                                              );
+                                            } else {
+                                              if (temp.trim() == '') {
+                                                Navigator.pop(context);
+                                              }
+                                              ShowSnackBar().showSnackBar(
+                                                context,
+                                                temp.trim() == ''
+                                                    ? 'No folder selected'
+                                                    : 'Already added',
+                                              );
+                                            }
+                                          },
+                                        );
+                                      }
 
+                                      return SizeTransition(
+                                        sizeFactor: animation,
+                                        child: ListTile(
+                                          leading: const Icon(
+                                            CupertinoIcons.folder,
+                                          ),
+                                          title: Text(
+                                            includedExcludedPaths[idx - 2]
+                                                .toString(),
+                                          ),
+                                          trailing: IconButton(
+                                            icon: const Icon(
+                                              CupertinoIcons.clear,
+                                              size: 15.0,
+                                            ),
+                                            tooltip: 'Remove',
+                                            onPressed: () {
+                                              includedExcludedPaths
+                                                  .removeAt(idx - 2);
+                                              Hive.box('settings').put(
+                                                'includedExcludedPaths',
+                                                includedExcludedPaths,
+                                              );
+                                              _listKey.currentState!.removeItem(
+                                                idx,
+                                                (context, animation) =>
+                                                    Container(),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                         ListTile(
                           title: Text(
                             AppLocalizations.of(
@@ -2383,7 +2669,7 @@ class _SettingPageState extends State<SettingPage> {
                           ),
                           keyName: 'supportEq',
                           isThreeLine: true,
-                          defaultValue: true,
+                          defaultValue: false,
                         ),
                         BoxSwitchTile(
                           title: Text(
@@ -2916,7 +3202,6 @@ class _SettingPageState extends State<SettingPage> {
                     ),
                   ),
                 ),
-              ),
               // Padding(
               //   padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 10.0),
               //   child: GradientCard(
@@ -3196,119 +3481,3 @@ class _SettingPageState extends State<SettingPage> {
               // ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  void switchToCustomTheme() {
-    const custom = 'Custom';
-    if (theme != custom) {
-      currentTheme.setInitialTheme(custom);
-      setState(
-        () {
-          theme = custom;
-        },
-      );
-    }
-  }
-}
-
-class BoxSwitchTile extends StatelessWidget {
-  const BoxSwitchTile({
-    Key? key,
-    required this.title,
-    this.subtitle,
-    required this.keyName,
-    required this.defaultValue,
-    this.isThreeLine,
-    this.onChanged,
-  }) : super(key: key);
-
-  final Text title;
-  final Text? subtitle;
-  final String keyName;
-  final bool defaultValue;
-  final bool? isThreeLine;
-  final Function(bool, Box box)? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: Hive.box('settings').listenable(),
-      builder: (BuildContext context, Box box, Widget? widget) {
-        return SwitchListTile(
-          activeColor: Theme.of(context).colorScheme.secondary,
-          title: title,
-          subtitle: subtitle,
-          isThreeLine: isThreeLine ?? false,
-          dense: true,
-          value: box.get(keyName, defaultValue: defaultValue) as bool? ??
-              defaultValue,
-          onChanged: (val) {
-            box.put(keyName, val);
-            onChanged?.call(val, box);
-          },
-        );
-      },
-    );
-  }
-}
-
-class SpotifyCountry {
-  Future<String> changeCountry({required BuildContext context}) async {
-    String region =
-        Hive.box('settings').get('region', defaultValue: 'India') as String;
-    await showModalBottomSheet(
-      isDismissible: true,
-      backgroundColor: Colors.transparent,
-      context: context,
-      builder: (BuildContext context) {
-        const Map<String, String> codes = CountryCodes.countryCodes;
-        final List<String> countries = codes.keys.toList();
-        return BottomGradientContainer(
-          borderRadius: BorderRadius.circular(
-            20.0,
-          ),
-          child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(
-              0,
-              10,
-              0,
-              10,
-            ),
-            itemCount: countries.length,
-            itemBuilder: (context, idx) {
-              return ListTileTheme(
-                selectedColor: Theme.of(context).colorScheme.secondary,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.only(
-                    left: 25.0,
-                    right: 25.0,
-                  ),
-                  title: Text(
-                    countries[idx],
-                  ),
-                  trailing: region == countries[idx]
-                      ? const Icon(Icons.check_rounded)
-                      : const SizedBox(),
-                  selected: region == countries[idx],
-                  onTap: () {
-                    top_screen.items = [];
-                    region = countries[idx];
-                    top_screen.fetched = false;
-                    Hive.box('settings').put('region', region);
-                    Navigator.pop(context);
-                  },
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-    return region;
-  }
-}

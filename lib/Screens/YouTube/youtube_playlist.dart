@@ -1,11 +1,33 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
+import 'package:audio_service/audio_service.dart';
+import 'package:blackhole/CustomWidgets/bouncy_sliver_scroll_view.dart';
 import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
 import 'package:blackhole/CustomWidgets/gradient_containers.dart';
 import 'package:blackhole/CustomWidgets/miniplayer.dart';
 import 'package:blackhole/CustomWidgets/song_tile_trailing_menu.dart';
+import 'package:blackhole/Helpers/add_mediitem_to_queue.dart';
+import 'package:blackhole/Helpers/mediaitem_converter.dart';
 import 'package:blackhole/Screens/Player/audioplayer.dart';
 import 'package:blackhole/Services/youtube_services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
@@ -67,96 +89,44 @@ class _YouTubePlaylistState extends State<YouTubePlaylist> {
                     SizedBox(
                       child: Center(
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.width / 7,
-                          width: MediaQuery.of(context).size.width / 7,
+                          height: MediaQuery.of(context).size.width / 8,
+                          width: MediaQuery.of(context).size.width / 8,
                           child: const CircularProgressIndicator(),
                         ),
                       ),
                     )
                   else
-                    CustomScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      slivers: [
-                        SliverAppBar(
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          stretch: true,
-                          expandedHeight:
-                              MediaQuery.of(context).size.height * 0.4,
-                          flexibleSpace: FlexibleSpaceBar(
-                            title: Text(
-                              widget.playlistName,
-                              textAlign: TextAlign.center,
-                            ),
-                            centerTitle: true,
-                            background: ShaderMask(
-                              shaderCallback: (rect) {
-                                return const LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [Colors.black, Colors.transparent],
-                                ).createShader(
-                                  Rect.fromLTRB(
-                                    0,
-                                    0,
-                                    rect.width,
-                                    rect.height,
-                                  ),
-                                );
-                              },
-                              blendMode: BlendMode.dstIn,
-                              child: CachedNetworkImage(
-                                fit: BoxFit.cover,
-                                errorWidget: (context, _, __) => const Image(
-                                  fit: BoxFit.cover,
-                                  image: AssetImage('assets/cover.jpg'),
+                    BouncyImageSliverScrollView(
+                      title: widget.playlistName,
+                      imageUrl: widget.playlistImage,
+                      sliverList: SliverList(
+                        delegate: SliverChildListDelegate(
+                          searchedList.map(
+                            (Video entry) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 5.0,
                                 ),
-                                imageUrl: widget.playlistImage,
-                                placeholder: (context, url) => const Image(
-                                  fit: BoxFit.cover,
-                                  image: AssetImage('assets/cover.jpg'),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SliverList(
-                          delegate: SliverChildListDelegate(
-                            searchedList.map(
-                              (Video entry) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 5.0,
-                                  ),
-                                  child: ListTile(
-                                    leading: Card(
-                                      elevation: 8,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          5.0,
-                                        ),
+                                child: ListTile(
+                                  leading: Card(
+                                    elevation: 8,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        5.0,
                                       ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: SizedBox(
-                                        height: 50.0,
-                                        width: 50.0,
-                                        child: CachedNetworkImage(
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: SizedBox(
+                                      height: 50.0,
+                                      width: 50.0,
+                                      child: CachedNetworkImage(
+                                        fit: BoxFit.cover,
+                                        errorWidget: (context, _, __) =>
+                                            CachedNetworkImage(
                                           fit: BoxFit.cover,
+                                          imageUrl:
+                                              entry.thumbnails.standardResUrl,
                                           errorWidget: (context, _, __) =>
-                                              CachedNetworkImage(
-                                            fit: BoxFit.cover,
-                                            imageUrl:
-                                                entry.thumbnails.standardResUrl,
-                                            errorWidget: (context, _, __) =>
-                                                const Image(
-                                              fit: BoxFit.cover,
-                                              image: AssetImage(
-                                                'assets/cover.jpg',
-                                              ),
-                                            ),
-                                          ),
-                                          imageUrl: entry.thumbnails.maxResUrl,
-                                          placeholder: (context, url) =>
                                               const Image(
                                             fit: BoxFit.cover,
                                             image: AssetImage(
@@ -164,86 +134,117 @@ class _YouTubePlaylistState extends State<YouTubePlaylist> {
                                             ),
                                           ),
                                         ),
+                                        imageUrl: entry.thumbnails.maxResUrl,
+                                        placeholder: (context, url) =>
+                                            const Image(
+                                          fit: BoxFit.cover,
+                                          image: AssetImage(
+                                            'assets/cover.jpg',
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    title: Text(
-                                      entry.title,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
+                                  ),
+                                  title: Text(
+                                    entry.title,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  onLongPress: () {
+                                    copyToClipboard(
+                                      context: context,
+                                      text: entry.title,
+                                    );
+                                  },
+                                  subtitle: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            entry.author,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    onLongPress: () {
-                                      copyToClipboard(
-                                        context: context,
-                                        text: entry.title,
-                                      );
-                                    },
-                                    subtitle: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              entry.author,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                        Text(
-                                          entry.duration
-                                              .toString()
-                                              .split('.')[0]
-                                              .replaceFirst('0:0', ''),
-                                        ),
-                                      ],
-                                    ),
-                                    onTap: () async {
-                                      setState(() {
-                                        done = false;
-                                      });
+                                      Text(
+                                        entry.duration
+                                            .toString()
+                                            .split('.')[0]
+                                            .replaceFirst('0:0', ''),
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: () async {
+                                    setState(() {
+                                      done = false;
+                                    });
 
-                                      final Map? response =
-                                          await YouTubeServices().formatVideo(
-                                        video: entry,
+                                    final Map? response =
+                                        await YouTubeServices().formatVideo(
+                                      video: entry,
+                                      quality: Hive.box('settings')
+                                          .get(
+                                            'ytQuality',
+                                            defaultValue: 'High',
+                                          )
+                                          .toString(),
+                                    );
+                                    setState(() {
+                                      done = true;
+                                    });
+                                    Navigator.push(
+                                      context,
+                                      PageRouteBuilder(
+                                        opaque: false,
+                                        pageBuilder: (_, __, ___) => PlayScreen(
+                                          songsList: [response],
+                                          index: 0,
+                                          recommend: false,
+                                          fromDownloads: false,
+                                          fromMiniplayer: false,
+                                          offline: false,
+                                        ),
+                                      ),
+                                    );
+                                    for (var i = 0;
+                                        i < searchedList.length;
+                                        i++) {
+                                      YouTubeServices()
+                                          .formatVideo(
+                                        video: searchedList[i],
                                         quality: Hive.box('settings')
                                             .get(
                                               'ytQuality',
                                               defaultValue: 'High',
                                             )
                                             .toString(),
-                                      );
-                                      setState(() {
-                                        done = true;
+                                      )
+                                          .then((songMap) {
+                                        final MediaItem mediaItem =
+                                            MediaItemConverter.mapToMediaItem(
+                                          songMap!,
+                                        );
+                                        addToNowPlaying(
+                                          context: context,
+                                          mediaItem: mediaItem,
+                                          showNotification: false,
+                                        );
                                       });
-                                      Navigator.push(
-                                        context,
-                                        PageRouteBuilder(
-                                          opaque: false,
-                                          pageBuilder: (_, __, ___) =>
-                                              PlayScreen(
-                                            songsList: [response],
-                                            index: 0,
-                                            recommend: false,
-                                            fromDownloads: false,
-                                            fromMiniplayer: false,
-                                            offline: false,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    trailing:
-                                        YtSongTileTrailingMenu(data: entry),
-                                  ),
-                                );
-                              },
-                            ).toList(),
-                          ),
+                                    }
+                                  },
+                                  trailing: YtSongTileTrailingMenu(data: entry),
+                                ),
+                              );
+                            },
+                          ).toList(),
                         ),
-                      ],
+                      ),
                     ),
                   if (!done)
                     Center(
@@ -273,9 +274,9 @@ class _YouTubePlaylistState extends State<YouTubePlaylist> {
                                   ),
                                   SizedBox(
                                     height:
-                                        MediaQuery.of(context).size.width / 7,
+                                        MediaQuery.of(context).size.width / 8,
                                     width:
-                                        MediaQuery.of(context).size.width / 7,
+                                        MediaQuery.of(context).size.width / 8,
                                     child: CircularProgressIndicator(
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         Theme.of(context).colorScheme.secondary,
@@ -298,7 +299,7 @@ class _YouTubePlaylistState extends State<YouTubePlaylist> {
               ),
             ),
           ),
-          MiniPlayer(),
+          const MiniPlayer(),
         ],
       ),
     );

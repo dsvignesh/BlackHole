@@ -1,3 +1,23 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:audiotagger/audiotagger.dart';
@@ -5,7 +25,6 @@ import 'package:audiotagger/models/tag.dart';
 import 'package:blackhole/CustomWidgets/snackbar.dart';
 import 'package:blackhole/Helpers/lyrics.dart';
 import 'package:blackhole/Services/ext_storage_provider.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_downloader/flutter_downloader.dart';
@@ -41,7 +60,7 @@ class Download with ChangeNotifier {
     download = true;
     if (!Platform.isWindows) {
       PermissionStatus status = await Permission.storage.status;
-      if (status.isPermanentlyDenied || status.isDenied) {
+      if (status.isDenied) {
         await [
           Permission.storage,
           Permission.accessMediaLocation,
@@ -49,10 +68,20 @@ class Download with ChangeNotifier {
         ].request();
       }
       status = await Permission.storage.status;
+      if (status.isPermanentlyDenied) {
+        await openAppSettings();
+      }
     }
     final RegExp avoid = RegExp(r'[\.\\\*\:\"\?#/;\|]');
     data['title'] = data['title'].toString().split('(From')[0].trim();
-    String filename = '${data["title"]} - ${data["artist"]}';
+
+    String filename = '';
+    if (Hive.box('settings').get('downFilename', defaultValue: 0) as int == 0) {
+      filename = '${data["title"]} - ${data["artist"]}';
+    } else {
+      filename = '${data["artist"]} - ${data["title"]}';
+    }
+    // String filename = '${data["title"]} - ${data["artist"]}';
     String dlPath =
         Hive.box('settings').get('downloadPath', defaultValue: '') as String;
     if (filename.length > 200) {
@@ -242,13 +271,13 @@ class Download with ChangeNotifier {
     notifyListeners();
     String? filepath;
     late String filepath2;
-    String appPath;
+    String? appPath;
     final List<int> _bytes = [];
     String lyrics;
     final artname = fileName.replaceAll('.m4a', '.jpg');
     if (!Platform.isWindows) {
-      final Directory appDir = await getTemporaryDirectory();
-      appPath = appDir.path;
+      appPath = Hive.box('settings').get('tempDirPath')?.toString();
+      appPath ??= (await getTemporaryDirectory()).path;
     } else {
       final Directory? temp = await getDownloadsDirectory();
       appPath = temp!.path;
@@ -376,30 +405,27 @@ class Download with ChangeNotifier {
           lyrics: lyrics,
           comment: 'BlackHole',
         );
-        try {
-          final tagger = Audiotagger();
-          await tagger.writeTags(
-            path: filepath!,
-            tag: tag,
-          );
-          // await Future.delayed(const Duration(seconds: 1), () async {
-          //   if (await file2.exists()) {
-          //     await file2.delete();
-          //   }
-          // });
-        } catch (e) {
-          // print('Failed to edit tags');
+        if (Platform.isAndroid) {
+          try {
+            final tagger = Audiotagger();
+            await tagger.writeTags(
+              path: filepath!,
+              tag: tag,
+            );
+            // await Future.delayed(const Duration(seconds: 1), () async {
+            //   if (await file2.exists()) {
+            //     await file2.delete();
+            //   }
+            // });
+          } catch (e) {
+            log('Failed to edit tags');
+          }
         }
         client.close();
         // debugPrint('Done');
         lastDownloadId = data['id'].toString();
         progress = 0.0;
         notifyListeners();
-
-        ShowSnackBar().showSnackBar(
-          context,
-          '"${data['title'].toString()}" ${AppLocalizations.of(context)!.downed}',
-        );
 
         final songData = {
           'id': data['id'].toString(),
@@ -423,7 +449,12 @@ class Download with ChangeNotifier {
           'from_yt': data['language'].toString() == 'YouTube',
           'dateAdded': DateTime.now().toString(),
         };
-        Hive.box('downloads').put(songData['id'], songData);
+        Hive.box('downloads').put(songData['id'].toString(), songData);
+
+        ShowSnackBar().showSnackBar(
+          context,
+          '"${data['title'].toString()}" ${AppLocalizations.of(context)!.downed}',
+        );
       } else {
         download = true;
         progress = 0.0;

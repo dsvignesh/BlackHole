@@ -1,11 +1,28 @@
-import 'dart:async';
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
 
 import 'package:blackhole/CustomWidgets/search_bar.dart';
 import 'package:blackhole/Screens/YouTube/youtube_playlist.dart';
 import 'package:blackhole/Screens/YouTube/youtube_search.dart';
 import 'package:blackhole/Services/youtube_services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:hive/hive.dart';
@@ -28,8 +45,13 @@ class _YouTubeState extends State<YouTube>
   bool showHistory =
       Hive.box('settings').get('showHistory', defaultValue: true) as bool;
   final TextEditingController _controller = TextEditingController();
-  int _currentPage = 0;
-  final PageController _pageController = PageController();
+  // int _currentPage = 0;
+  // final PageController _pageController = PageController(
+  // viewportFraction:
+  //     (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+  //         ? 0.385
+  //         : 1.0,
+  // );
 
   @override
   bool get wantKeepAlive => true;
@@ -52,22 +74,22 @@ class _YouTubeState extends State<YouTube>
         }
       });
     }
-    if (headList.isNotEmpty) {
-      Timer.periodic(const Duration(seconds: 4), (Timer timer) {
-        if (_currentPage < headList.length - 1) {
-          _currentPage++;
-        } else {
-          _currentPage = 0;
-        }
-        if (_pageController.hasClients) {
-          _pageController.animateToPage(
-            _currentPage,
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeIn,
-          );
-        }
-      });
-    }
+    // if (headList.isNotEmpty) {
+    // Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+    //   if (_currentPage < headList.length - 1) {
+    //     _currentPage++;
+    //   } else {
+    //     _currentPage = 0;
+    //   }
+    //   if (_pageController.hasClients) {
+    //     _pageController.animateToPage(
+    //       _currentPage,
+    //       duration: const Duration(milliseconds: 350),
+    //       curve: Curves.easeIn,
+    //     );
+    //   }
+    // });
+    // }
     super.initState();
   }
 
@@ -80,10 +102,12 @@ class _YouTubeState extends State<YouTube>
   @override
   Widget build(BuildContext cntxt) {
     super.build(context);
-    final double boxSize =
-        MediaQuery.of(context).size.height > MediaQuery.of(context).size.width
-            ? MediaQuery.of(context).size.width
-            : MediaQuery.of(context).size.height;
+    final bool rotated =
+        MediaQuery.of(context).size.height < MediaQuery.of(context).size.width;
+    double boxSize = !rotated
+        ? MediaQuery.of(context).size.width / 2
+        : MediaQuery.of(context).size.height / 2.5;
+    if (boxSize > 250) boxSize = 250;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: Colors.transparent,
@@ -120,8 +144,8 @@ class _YouTubeState extends State<YouTube>
         body: (searchedList.isEmpty)
             ? Center(
                 child: SizedBox(
-                  height: boxSize / 7,
-                  width: boxSize / 7,
+                  height: boxSize / 4,
+                  width: boxSize / 4,
                   child: const CircularProgressIndicator(),
                 ),
               )
@@ -131,76 +155,55 @@ class _YouTubeState extends State<YouTube>
                 child: Column(
                   children: [
                     if (headList.isNotEmpty)
-                      SizedBox(
-                        height: boxSize / 2 + 20,
-                        width: double.infinity,
-                        child: PageView.builder(
-                          controller: _pageController,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: headList.length,
-                          onPageChanged: (int value) {
-                            _currentPage = value;
-                          },
-                          itemBuilder: (context, index) => GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  pageBuilder: (_, __, ___) =>
-                                      YouTubeSearchPage(
-                                    query: headList[index]['title'].toString(),
-                                  ),
+                      CarouselSlider.builder(
+                        // PageView.builder(
+                        // controller: _pageController,
+                        // physics: const BouncingScrollPhysics(),
+                        itemCount: headList.length,
+                        options: CarouselOptions(
+                          height: boxSize + 20,
+                          viewportFraction: rotated ? 0.36 : 1.0,
+                          autoPlay: true,
+                          enlargeCenterPage: true,
+                        ),
+                        // onPageChanged: (int value) {
+                        // _currentPage = value;
+                        // },
+                        itemBuilder: (
+                          BuildContext context,
+                          int index,
+                          int pageViewIndex,
+                        ) =>
+                            GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                opaque: false,
+                                pageBuilder: (_, __, ___) => YouTubeSearchPage(
+                                  query: headList[index]['title'].toString(),
                                 ),
-                              );
-                            },
-                            child: SizedBox(
-                              width: boxSize,
-                              child: Column(
-                                children: [
-                                  Card(
-                                    elevation: 5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: CachedNetworkImage(
-                                      fit: BoxFit.cover,
-                                      errorWidget: (context, _, __) =>
-                                          const Image(
-                                        fit: BoxFit.cover,
-                                        image: AssetImage(
-                                          'assets/ytCover.png',
-                                        ),
-                                      ),
-                                      imageUrl:
-                                          headList[index]['image'].toString(),
-                                      placeholder: (context, url) =>
-                                          const Image(
-                                        fit: BoxFit.cover,
-                                        image: AssetImage('assets/ytCover.png'),
-                                      ),
-                                    ),
-                                  ),
-                                  // Text(
-                                  //   '${headList[index]["title"]}',
-                                  //   textAlign: TextAlign.center,
-                                  //   softWrap: false,
-                                  //   overflow: TextOverflow.ellipsis,
-                                  // ),
-                                  // Text(
-                                  //   '${headList[index]["description"]}',
-                                  //   textAlign: TextAlign.center,
-                                  //   softWrap: false,
-                                  //   overflow: TextOverflow.ellipsis,
-                                  //   style: TextStyle(
-                                  //       fontSize: 11,
-                                  //       color: Theme.of(context)
-                                  //           .textTheme
-                                  //           .caption!
-                                  //           .color),
-                                  // )
-                                ],
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: CachedNetworkImage(
+                              fit: BoxFit.cover,
+                              errorWidget: (context, _, __) => const Image(
+                                fit: BoxFit.cover,
+                                image: AssetImage(
+                                  'assets/ytCover.png',
+                                ),
+                              ),
+                              imageUrl: headList[index]['image'].toString(),
+                              placeholder: (context, url) => const Image(
+                                fit: BoxFit.cover,
+                                image: AssetImage('assets/ytCover.png'),
                               ),
                             ),
                           ),
@@ -233,7 +236,7 @@ class _YouTubeState extends State<YouTube>
                               ],
                             ),
                             SizedBox(
-                              height: boxSize / 2 + 10,
+                              height: boxSize + 10,
                               width: double.infinity,
                               child: ListView.builder(
                                 physics: const BouncingScrollPhysics(),
@@ -279,44 +282,46 @@ class _YouTubeState extends State<YouTube>
                                     },
                                     child: SizedBox(
                                       width: item['type'] != 'playlist'
-                                          ? boxSize - 110
-                                          : boxSize / 2 - 30,
+                                          ? (boxSize - 30) * (16 / 9)
+                                          : boxSize - 30,
                                       child: Column(
                                         children: [
-                                          Card(
-                                            elevation: 5,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10.0),
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: CachedNetworkImage(
-                                              fit: BoxFit.cover,
-                                              errorWidget: (context, _, __) =>
-                                                  Image(
-                                                fit: BoxFit.cover,
-                                                image:
-                                                    item['type'] != 'playlist'
-                                                        ? const AssetImage(
-                                                            'assets/ytCover.png',
-                                                          )
-                                                        : const AssetImage(
-                                                            'assets/cover.jpg',
-                                                          ),
+                                          Expanded(
+                                            child: Card(
+                                              elevation: 5,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10.0),
                                               ),
-                                              imageUrl:
-                                                  item['image'].toString(),
-                                              placeholder: (context, url) =>
-                                                  Image(
+                                              clipBehavior: Clip.antiAlias,
+                                              child: CachedNetworkImage(
                                                 fit: BoxFit.cover,
-                                                image:
-                                                    item['type'] != 'playlist'
-                                                        ? const AssetImage(
-                                                            'assets/ytCover.png',
-                                                          )
-                                                        : const AssetImage(
-                                                            'assets/cover.jpg',
-                                                          ),
+                                                errorWidget: (context, _, __) =>
+                                                    Image(
+                                                  fit: BoxFit.cover,
+                                                  image:
+                                                      item['type'] != 'playlist'
+                                                          ? const AssetImage(
+                                                              'assets/ytCover.png',
+                                                            )
+                                                          : const AssetImage(
+                                                              'assets/cover.jpg',
+                                                            ),
+                                                ),
+                                                imageUrl:
+                                                    item['image'].toString(),
+                                                placeholder: (context, url) =>
+                                                    Image(
+                                                  fit: BoxFit.cover,
+                                                  image:
+                                                      item['type'] != 'playlist'
+                                                          ? const AssetImage(
+                                                              'assets/ytCover.png',
+                                                            )
+                                                          : const AssetImage(
+                                                              'assets/cover.jpg',
+                                                            ),
+                                                ),
                                               ),
                                             ),
                                           ),

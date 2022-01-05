@@ -1,6 +1,24 @@
-import 'dart:ui';
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
 
 import 'package:blackhole/APIs/api.dart';
+import 'package:blackhole/CustomWidgets/bouncy_sliver_scroll_view.dart';
 import 'package:blackhole/CustomWidgets/copy_clipboard.dart';
 import 'package:blackhole/CustomWidgets/download_button.dart';
 import 'package:blackhole/CustomWidgets/empty_screen.dart';
@@ -27,60 +45,106 @@ class AlbumSearchPage extends StatefulWidget {
 }
 
 class _AlbumSearchPageState extends State<AlbumSearchPage> {
-  bool status = false;
-  List<Map> searchedList = [];
-  bool fetched = false;
+  int page = 1;
+  bool loading = false;
+  List<Map>? _searchedList;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent &&
+          !loading) {
+        page += 1;
+        _fetchData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _scrollController.dispose();
+  }
+
+  void _fetchData() {
+    loading = true;
+    switch (widget.type) {
+      case 'Playlists':
+        SaavnAPI()
+            .fetchAlbums(
+          searchQuery: widget.query,
+          type: 'playlist',
+          page: page,
+        )
+            .then((value) {
+          final temp = _searchedList ?? [];
+          temp.addAll(value);
+          setState(() {
+            _searchedList = temp;
+            loading = false;
+          });
+        });
+        break;
+      case 'Albums':
+        SaavnAPI()
+            .fetchAlbums(
+          searchQuery: widget.query,
+          type: 'album',
+          page: page,
+        )
+            .then((value) {
+          final temp = _searchedList ?? [];
+          temp.addAll(value);
+          setState(() {
+            _searchedList = temp;
+            loading = false;
+          });
+        });
+        break;
+      case 'Artists':
+        SaavnAPI()
+            .fetchAlbums(
+          searchQuery: widget.query,
+          type: 'artist',
+          page: page,
+        )
+            .then((value) {
+          final temp = _searchedList ?? [];
+          temp.addAll(value);
+          setState(() {
+            _searchedList = temp;
+            loading = false;
+          });
+        });
+        break;
+      default:
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!status) {
-      status = true;
-      switch (widget.type) {
-        case 'Playlists':
-          SaavnAPI().fetchAlbums(widget.query, 'playlist').then((value) {
-            setState(() {
-              searchedList = value;
-              fetched = true;
-            });
-          });
-          break;
-        case 'Albums':
-          SaavnAPI().fetchAlbums(widget.query, 'album').then((value) {
-            setState(() {
-              searchedList = value;
-              fetched = true;
-            });
-          });
-          break;
-        case 'Artists':
-          SaavnAPI().fetchAlbums(widget.query, 'artist').then((value) {
-            setState(() {
-              searchedList = value;
-              fetched = true;
-            });
-          });
-          break;
-        default:
-          break;
-      }
-    }
     return GradientContainer(
       child: Column(
         children: [
           Expanded(
             child: Scaffold(
               backgroundColor: Colors.transparent,
-              body: !fetched
+              body: _searchedList == null
                   ? SizedBox(
                       child: Center(
                         child: SizedBox(
-                          height: MediaQuery.of(context).size.width / 7,
-                          width: MediaQuery.of(context).size.width / 7,
+                          height: MediaQuery.of(context).size.width / 8,
+                          width: MediaQuery.of(context).size.width / 8,
                           child: const CircularProgressIndicator(),
                         ),
                       ),
                     )
-                  : searchedList.isEmpty
+                  : _searchedList!.isEmpty
                       ? emptyScreen(
                           context,
                           0,
@@ -91,156 +155,102 @@ class _AlbumSearchPageState extends State<AlbumSearchPage> {
                           AppLocalizations.of(context)!.resultsNotFound,
                           20,
                         )
-                      : CustomScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          slivers: [
-                            SliverAppBar(
-                              // backgroundColor: Colors.transparent,
-                              elevation: 0,
-                              stretch: true,
-                              pinned: true,
-                              // floating: true,
-                              expandedHeight:
-                                  MediaQuery.of(context).size.height * 0.4,
-                              flexibleSpace: FlexibleSpaceBar(
-                                title: Text(
-                                  widget.type,
-                                  textAlign: TextAlign.center,
-                                ),
-                                centerTitle: true,
-                                background: ShaderMask(
-                                  shaderCallback: (rect) {
-                                    return const LinearGradient(
-                                      begin: Alignment.center,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black,
-                                        Colors.transparent
-                                      ],
-                                    ).createShader(
-                                      Rect.fromLTRB(
-                                        0,
-                                        0,
-                                        rect.width,
-                                        rect.height,
+                      : BouncyImageSliverScrollView(
+                          scrollController: _scrollController,
+                          title: widget.type,
+                          placeholderImage: widget.type == 'Artists'
+                              ? 'assets/artist.png'
+                              : 'assets/album.png',
+                          sliverList: SliverList(
+                            delegate: SliverChildListDelegate(
+                              _searchedList!.map(
+                                (Map entry) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 7),
+                                    child: ListTile(
+                                      title: Text(
+                                        '${entry["title"]}',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    );
-                                  },
-                                  blendMode: BlendMode.dstIn,
-                                  child: Image(
-                                    fit: BoxFit.cover,
-                                    image: AssetImage(
-                                      widget.type == 'Artists'
-                                          ? 'assets/artist.png'
-                                          : 'assets/album.png',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SliverList(
-                              delegate: SliverChildListDelegate(
-                                searchedList.map(
-                                  (Map entry) {
-                                    return Padding(
-                                      padding:
-                                          const EdgeInsets.fromLTRB(0, 7, 7, 5),
-                                      child: ListTile(
-                                        contentPadding:
-                                            const EdgeInsets.only(left: 15.0),
-                                        title: Text(
-                                          '${entry["title"]}',
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w500,
+                                      onLongPress: () {
+                                        copyToClipboard(
+                                          context: context,
+                                          text: '${entry["title"]}',
+                                        );
+                                      },
+                                      subtitle: Text(
+                                        '${entry["subtitle"]}',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      leading: Card(
+                                        elevation: 8,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            widget.type == 'Artists'
+                                                ? 50.0
+                                                : 7.0,
                                           ),
                                         ),
-                                        onLongPress: () {
-                                          copyToClipboard(
-                                            context: context,
-                                            text: '${entry["title"]}',
-                                          );
-                                        },
-                                        subtitle: Text(
-                                          '${entry["subtitle"]}',
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        leading: Card(
-                                          elevation: 8,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              widget.type == 'Artists'
-                                                  ? 50.0
-                                                  : 7.0,
-                                            ),
-                                          ),
-                                          clipBehavior: Clip.antiAlias,
-                                          child: CachedNetworkImage(
+                                        clipBehavior: Clip.antiAlias,
+                                        child: CachedNetworkImage(
+                                          fit: BoxFit.cover,
+                                          errorWidget: (context, _, __) =>
+                                              Image(
                                             fit: BoxFit.cover,
-                                            errorWidget: (context, _, __) =>
-                                                Image(
-                                              fit: BoxFit.cover,
-                                              image: AssetImage(
-                                                widget.type == 'Artists'
-                                                    ? 'assets/artist.png'
-                                                    : 'assets/album.png',
-                                              ),
+                                            image: AssetImage(
+                                              widget.type == 'Artists'
+                                                  ? 'assets/artist.png'
+                                                  : 'assets/album.png',
                                             ),
-                                            imageUrl:
-                                                '${entry["image"].replaceAll('http:', 'https:')}',
-                                            placeholder: (context, url) =>
-                                                Image(
-                                              fit: BoxFit.cover,
-                                              image: AssetImage(
-                                                widget.type == 'Artists'
-                                                    ? 'assets/artist.png'
-                                                    : 'assets/album.png',
-                                              ),
+                                          ),
+                                          imageUrl:
+                                              '${entry["image"].replaceAll('http:', 'https:')}',
+                                          placeholder: (context, url) => Image(
+                                            fit: BoxFit.cover,
+                                            image: AssetImage(
+                                              widget.type == 'Artists'
+                                                  ? 'assets/artist.png'
+                                                  : 'assets/album.png',
                                             ),
                                           ),
                                         ),
-                                        trailing: widget.type != 'Albums'
-                                            ? null
-                                            : AlbumDownloadButton(
-                                                albumName:
-                                                    entry['title'].toString(),
-                                                albumId: entry['id'].toString(),
-                                              ),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            PageRouteBuilder(
-                                              opaque: false,
-                                              pageBuilder: (_, __, ___) =>
-                                                  widget.type == 'Artists'
-                                                      ? ArtistSearchPage(
-                                                          artistName:
-                                                              entry['title']
-                                                                  .toString(),
-                                                          artistToken: entry[
-                                                                  'artistToken']
-                                                              .toString(),
-                                                          artistImage:
-                                                              entry['image']
-                                                                  .toString(),
-                                                        )
-                                                      : SongsListPage(
-                                                          listItem: entry,
-                                                        ),
-                                            ),
-                                          );
-                                        },
                                       ),
-                                    );
-                                  },
-                                ).toList(),
-                              ),
+                                      trailing: widget.type != 'Albums'
+                                          ? null
+                                          : AlbumDownloadButton(
+                                              albumName:
+                                                  entry['title'].toString(),
+                                              albumId: entry['id'].toString(),
+                                            ),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          PageRouteBuilder(
+                                            opaque: false,
+                                            pageBuilder: (_, __, ___) =>
+                                                widget.type == 'Artists'
+                                                    ? ArtistSearchPage(
+                                                        data: entry,
+                                                      )
+                                                    : SongsListPage(
+                                                        listItem: entry,
+                                                      ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ).toList(),
                             ),
-                          ],
+                          ),
                         ),
             ),
           ),
-          MiniPlayer(),
+          const MiniPlayer(),
         ],
       ),
     );

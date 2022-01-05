@@ -1,3 +1,22 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:io';
 
 import 'package:blackhole/CustomWidgets/snackbar.dart';
@@ -19,7 +38,7 @@ Future<void> createBackup(
 }) async {
   if (!Platform.isWindows) {
     PermissionStatus status = await Permission.storage.status;
-    if (status.isPermanentlyDenied || status.isDenied) {
+    if (status.isDenied) {
       await [
         Permission.storage,
         Permission.accessMediaLocation,
@@ -27,11 +46,14 @@ Future<void> createBackup(
       ].request();
     }
     status = await Permission.storage.status;
+    if (status.isPermanentlyDenied) {
+      await openAppSettings();
+    }
   }
   final String savePath = path ??
       await Picker.selectFolder(
-        context,
-        AppLocalizations.of(context)!.selectBackLocation,
+        context: context,
+        message: AppLocalizations.of(context)!.selectBackLocation,
       );
   if (savePath.trim() != '') {
     try {
@@ -97,9 +119,9 @@ Future<void> restore(
   BuildContext context,
 ) async {
   final String savePath = await Picker.selectFile(
-    context,
-    ['zip'],
-    AppLocalizations.of(context)!.selectBackFile,
+    context: context,
+    ext: ['zip'],
+    message: AppLocalizations.of(context)!.selectBackFile,
   );
   final File zipFile = File(savePath);
   final Directory tempDir = await getTemporaryDirectory();

@@ -1,4 +1,21 @@
-library config.globals;
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -15,17 +32,20 @@ class MyTheme with ChangeNotifier {
   String canvasColor =
       Hive.box('settings').get('canvasColor', defaultValue: 'Grey') as String;
   String cardColor =
-      Hive.box('settings').get('cardColor', defaultValue: 'Grey850') as String;
+      Hive.box('settings').get('cardColor', defaultValue: 'Grey900') as String;
 
-  int backGrad = Hive.box('settings').get('backGrad', defaultValue: 1) as int;
-  int cardGrad = Hive.box('settings').get('cardGrad', defaultValue: 3) as int;
+  int backGrad = Hive.box('settings').get('backGrad', defaultValue: 2) as int;
+  int cardGrad = Hive.box('settings').get('cardGrad', defaultValue: 4) as int;
   int bottomGrad =
-      Hive.box('settings').get('bottomGrad', defaultValue: 2) as int;
+      Hive.box('settings').get('bottomGrad', defaultValue: 3) as int;
 
   int colorHue = Hive.box('settings').get('colorHue', defaultValue: 400) as int;
   Color? playGradientColor;
 
-  List<List<Color>> backOpt = [
+  List<List<Color>> get backOpt => _backOpt;
+  List<List<Color>> get cardOpt => _cardOpt;
+
+  final List<List<Color>> _backOpt = [
     [
       Colors.grey[850]!,
       Colors.grey[900]!,
@@ -51,7 +71,7 @@ class MyTheme with ChangeNotifier {
     ]
   ];
 
-  List<List<Color>> cardOpt = [
+  final List<List<Color>> _cardOpt = [
     [
       Colors.grey[850]!,
       Colors.grey[850]!,
@@ -87,7 +107,7 @@ class MyTheme with ChangeNotifier {
     ]
   ];
 
-  List<List<Color>> transOpt = [
+  final List<List<Color>> _transOpt = [
     [
       Colors.grey[850]!.withOpacity(0.8),
       Colors.grey[900]!.withOpacity(0.9),
@@ -123,11 +143,11 @@ class MyTheme with ChangeNotifier {
     accentColor = settingsBox.get('themeColor', defaultValue: 'Teal') as String;
     canvasColor =
         settingsBox.get('canvasColor', defaultValue: 'Grey') as String;
-    cardColor = settingsBox.get('cardColor', defaultValue: 'Grey850') as String;
+    cardColor = settingsBox.get('cardColor', defaultValue: 'Grey900') as String;
 
-    backGrad = settingsBox.get('backGrad', defaultValue: 1) as int;
-    cardGrad = settingsBox.get('cardGrad', defaultValue: 3) as int;
-    bottomGrad = settingsBox.get('bottomGrad', defaultValue: 2) as int;
+    backGrad = settingsBox.get('backGrad', defaultValue: 2) as int;
+    cardGrad = settingsBox.get('cardGrad', defaultValue: 4) as int;
+    bottomGrad = settingsBox.get('bottomGrad', defaultValue: 3) as int;
 
     colorHue = settingsBox.get('colorHue', defaultValue: 400) as int;
     notifyListeners();
@@ -163,10 +183,6 @@ class MyTheme with ChangeNotifier {
 
   int currentHue() {
     return colorHue;
-  }
-
-  Future<void> setLastPlayGradient(Color? color) async {
-    playGradientColor = color;
   }
 
   Color getColor(String color, int hue) {
@@ -237,28 +253,24 @@ class MyTheme with ChangeNotifier {
     if (notify) notifyListeners();
   }
 
-  List<Color> getCardGradient({bool miniplayer = false}) {
-    final List<Color> output = cardOpt[cardGrad];
-    if (miniplayer && output.length > 2) {
-      output.removeAt(0);
-    }
-    return output;
+  List<Color> getCardGradient() {
+    return _cardOpt[cardGrad];
   }
 
   List<Color> getBackGradient() {
-    return backOpt[backGrad];
+    return _backOpt[backGrad];
   }
 
   Color getPlayGradient() {
-    return backOpt[backGrad].last;
+    return _backOpt[backGrad].last;
   }
 
   List<Color> getTransBackGradient() {
-    return transOpt[backGrad];
+    return _transOpt[backGrad];
   }
 
   List<Color> getBottomGradient() {
-    return backOpt[bottomGrad];
+    return _backOpt[bottomGrad];
   }
 
   Color currentColor() {
@@ -342,5 +354,3 @@ class MyTheme with ChangeNotifier {
     return Hive.box('settings').get('theme') as String;
   }
 }
-
-MyTheme currentTheme = MyTheme();

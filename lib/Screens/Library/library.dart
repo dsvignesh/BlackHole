@@ -1,11 +1,34 @@
+/*
+ *  This file is part of BlackHole (https://github.com/Sangwan5688/BlackHole).
+ * 
+ * BlackHole is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BlackHole is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with BlackHole.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * Copyright (c) 2021-2022, Ankit Sangwan
+ */
+
 import 'dart:io';
 
 import 'package:blackhole/Screens/Library/liked.dart';
+import 'package:blackhole/Screens/LocalMusic/downed_songs.dart';
+import 'package:blackhole/Screens/LocalMusic/downed_songs_desktop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class LibraryPage extends StatefulWidget {
+  const LibraryPage({Key? key}) : super(key: key);
+
   @override
   _LibraryPageState createState() => _LibraryPageState();
 }
@@ -19,6 +42,9 @@ class _LibraryPageState extends State<LibraryPage> {
         AppBar(
           title: Text(
             AppLocalizations.of(context)!.library,
+            style: TextStyle(
+              color: Theme.of(context).iconTheme.color,
+            ),
           ),
           centerTitle: true,
           backgroundColor: Colors.transparent,
@@ -63,18 +89,29 @@ class _LibraryPageState extends State<LibraryPage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    const LikedSongs(playlistName: 'Favorite Songs'),
+                builder: (context) => LikedSongs(
+                  playlistName: 'Favorite Songs',
+                  showName: AppLocalizations.of(context)!.favSongs,
+                ),
               ),
             );
           },
         ),
-        if (Platform.isAndroid)
+        if (!Platform.isIOS)
           LibraryTile(
             title: AppLocalizations.of(context)!.myMusic,
             icon: MdiIcons.folderMusic,
             onTap: () {
-              Navigator.pushNamed(context, '/mymusic');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => (Platform.isWindows || Platform.isLinux)
+                      ? const DownloadedSongsDesktop()
+                      : const DownloadedSongs(
+                          showPlaylists: true,
+                        ),
+                ),
+              );
             },
           ),
         LibraryTile(
